@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wellbeing Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:           #f5f0eb;
+            --surface:      #fdfaf7;
+            --border:       #e2d9cf;
+            --accent:       #7c9e8f;
+            --accent-dk:    #5d8272;
+            --text:         #2d2822;
+            --text-soft:    #7a6e65;
+            --bubble-ai:    #ffffff;
+            --bubble-user:  #3b5249;
+            --user-text:    #f5f0eb;
+            --shadow:       0 4px 28px rgba(60,45,30,0.09);
+            --r:            18px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 18% 8%,  rgba(196,168,130,.14) 0%, transparent 58%),
+                radial-gradient(ellipse at 82% 92%, rgba(124,158,143,.12) 0%, transparent 55%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 32px 16px 48px;
+            color: var(--text);
+        }
+
+        .app { width: 100%; max-width: 520px; }
+
+        /* ── Chat shell ── */
+        .chat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            height: 88vh;
+            max-height: 740px;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+        .h-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05em;
+            flex-shrink: 0;
+        }
+        .h-name {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 0.98em;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .h-status {
+            font-size: 0.72em;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 2.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1;   transform: scale(1);    }
+            50%       { opacity: 0.4; transform: scale(0.82); }
+        }
+
+        /* ── Messages ── */
+        .chat-messages {
+            flex-grow: 1;
+            padding: 18px 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* ── Message row ── */
+        .msg-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.42s ease, transform 0.42s ease;
+        }
+        .msg-row.visible         { opacity: 1; transform: translateY(0); }
+        .msg-row.msg-ai          { justify-content: flex-start; }
+        .msg-row.msg-user        { justify-content: flex-end; }
+
+        /* Avatar */
+        .avatar {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.82em;
+            margin-bottom: 2px;
+            transition: opacity 0.2s;
+        }
+        .avatar-ai   { background: linear-gradient(135deg, var(--accent), var(--accent-dk)); color: #fff; }
+        .avatar-user { background: var(--bubble-user); color: var(--user-text); font-size: 0.68em; font-weight: 600; letter-spacing: .04em; }
+        .avatar-ghost { visibility: hidden; } /* keeps alignment, invisible */
+
+        /* Bubble group */
+        .msg-group { display: flex; flex-direction: column; max-width: 80%; }
+
+        .bubble {
+            padding: 11px 16px;
+            border-radius: 18px;
+            font-size: 0.875em;
+            line-height: 1.7;
+            word-wrap: break-word;
+        }
+        .bubble-ai {
+            background: var(--bubble-ai);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 1px 4px rgba(60,45,30,.05);
+        }
+        .bubble-user {
+            background: var(--bubble-user);
+            color: var(--user-text);
+            border-bottom-right-radius: 5px;
+        }
+
+        .ts {
+            font-size: 0.66em;
+            color: var(--text-soft);
+            opacity: 0.6;
+            margin-top: 3px;
+        }
+        .msg-ai  .ts { padding-left:  2px; }
+        .msg-user .ts { text-align: right; padding-right: 2px; }
+
+        /* ── Typing bubble ── */
+        .typing-dots {
+            display: flex; align-items: center; gap: 4px;
+            padding: 11px 16px;
+        }
+        .typing-dots span {
+            width: 7px; height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: .45;
+            animation: dot-bounce 1.35s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .18s; }
+        .typing-dots span:nth-child(3) { animation-delay: .36s; }
+        @keyframes dot-bounce {
+            0%, 60%, 100% { transform: translateY(0);   opacity: .4; }
+            30%            { transform: translateY(-7px); opacity: 1;  }
+        }
+
+        /* ── Day separator ── */
+        .day-sep {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.69em;
+            color: var(--text-soft);
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin: 4px 0;
+            opacity: 0;
+            transition: opacity .5s .15s;
+        }
+        .day-sep.visible { opacity: 1; }
+        .day-sep::before, .day-sep::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* ── Footer ── */
+        .chat-footer {
+            flex-shrink: 0;
+            padding: 13px 18px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            min-height: 62px;
+            background: var(--surface);
+            transition: opacity .25s;
+        }
+        .chat-footer.hidden { opacity: 0; pointer-events: none; }
+
+        /* Continue button */
+        #continue-btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.86em;
+            font-weight: 500;
+            padding: 9px 20px;
+            border-radius: 22px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: .01em;
+            transition: background .2s, transform .15s;
+        }
+        #continue-btn:hover:not(:disabled) {
+            background: var(--accent-dk);
+            transform: translateX(2px);
+        }
+        #continue-btn:disabled {
+            background: var(--border);
+            color: var(--text-soft);
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-arrow { font-size: .95em; }
+        #continue-btn:not(:disabled) .btn-arrow {
+            animation: nudge 1.6s ease-in-out infinite;
+        }
+        @keyframes nudge {
+            0%, 100% { transform: translateX(0); }
+            50%       { transform: translateX(3px); }
+        }
+        .countdown { font-size: .78em; opacity: .68; font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+<div class="app">
+<div class="chat">
+
+    <!-- Header -->
+    <div class="chat-header">
+        <div class="h-avatar">🌿</div>
+        <div>
+            <div class="h-name">Wellbeing Assistant</div>
+            <div class="h-status"><span class="status-dot"></span>Here for you</div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="msgs"></div>
+
+    <!-- Footer -->
+    <div class="chat-footer hidden" id="footer">
+        <button id="continue-btn" disabled>
+            <span id="btn-label">Continue</span>
+            <span class="btn-arrow">→</span>
+        </button>
+    </div>
+
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ─────────────────────────────────────────
+    // CONVERSATION DATA
+    // typingMs  = how long the typing indicator shows before the bubble appears
+    // readLockMs = minimum time (after last bubble in a turn) before Continue activates
+    // interMsgMs = pause between consecutive AI bubbles in the same turn
+    // ─────────────────────────────────────────
+    const SCRIPT = [
+        { type: 'sep', text: 'Today' },
+
+        // ── AI Turn 1 ──────────────────────────────
+        {
+            type: 'ai',
+            interMsgMs: 900,
+            readLockMs: 7000,
+            msgs: [
+                {
+                    typingMs: 4500,
+                    text: "Hello, I am glad you are here. Before we begin, I want to be upfront about how this works. Everything I say will be based entirely on what you share with me in this conversation. I do not draw on any assumptions or information from outside of what you tell me, and nothing you share is stored or used beyond this session."
+                },
+                {
+                    typingMs: 4000,
+                    text: "There is also no right or wrong way to do this. We can begin in a way that feels most comfortable for you. I could ask you a few questions to help us find a starting point, or you could simply share whatever has been on your mind. Which would feel easier for you?"
+                }
+            ]
+        },
+
+        // ── User Turn 1 ────────────────────────────
+        {
+            type: 'user',
+            text: "I am not sure where to start. I have just been feeling really overwhelmed lately."
+        },
+
+        // ── AI Turn 2 ──────────────────────────────
+        {
+            type: 'ai',
+            interMsgMs: 900,
+            readLockMs: 6000,
+            msgs: [
+                {
+                    typingMs: 3000,
+                    text: "Thank you for sharing that, and it makes complete sense that it is hard to know where to begin when everything feels like a lot at once."
+                },
+                {
+                    typingMs: 4500,
+                    text: "Before I suggest anything, I would like to understand a bit more about what the overwhelm has been like for you specifically. Is there a particular part of things that has been feeling hardest, or does it feel more like everything at once? We can take the conversation in whatever direction feels most relevant to you."
+                }
+            ]
+        },
+
+        // ── User Turn 2 ────────────────────────────
+        {
+            type: 'user',
+            text: "I have so many deadlines coming up and I just cannot seem to switch off at night. I have also been avoiding my friends because I just do not have the energy."
+        },
+
+        // ── AI Turn 3 ──────────────────────────────
+        {
+            type: 'ai',
+            interMsgMs: 1000,
+            readLockMs: 9000,
+            msgs: [
+                {
+                    typingMs: 5000,
+                    text: "Thank you, that really helps me understand where things are sitting for you right now, and that is what I am working from. From what you have described, I can hear that the stress is hitting hardest at night when your mind will not settle, and that the tiredness is starting to affect how connected you feel to the people around you."
+                },
+                {
+                    typingMs: 5000,
+                    text: "Those two things stand out most clearly in what you shared, and they are what I want to focus on rather than stress in general. Because you described nighttime as the hardest point specifically, a structured wind-down routine makes more sense here than broader strategies. If you had described feeling overwhelmed mainly during the day, I would have suggested something different."
+                },
+                {
+                    typingMs: 4500,
+                    text: "There are a couple of directions we could take from here. We could look at ways to create a clearer boundary between work and rest in the evenings, or focus more on what to do in those moments when your mind will not settle at night. Which of those feels more useful to start with?"
+                }
+            ]
+        },
+
+        // ── User Turn 3 ────────────────────────────
+        {
+            type: 'user',
+            text: "Probably the second one. My mind just keeps going over everything I still need to do."
+        },
+
+        // ── AI Turn 4 ──────────────────────────────
+        {
+            type: 'ai',
+            interMsgMs: 1000,
+            readLockMs: 9000,
+            msgs: [
+                {
+                    typingMs: 4000,
+                    text: "That makes a lot of sense. It is a very common pattern when there is a lot of pressure, and the mind tends to rehearse unfinished things as a way of trying to stay on top of them, even when rest is what you actually need."
+                },
+                {
+                    typingMs: 6500,
+                    text: "Because you have described it as repetitive thoughts about what is still left to do rather than general anxiety, I want to suggest something specific to that pattern rather than a general relaxation technique. One approach that tends to help with exactly this is a brief structured worry-offload before bed — setting aside ten minutes earlier in the evening to write down everything still on your mind and one small next step for each thing, so your mind has somewhere to put those thoughts before you try to sleep."
+                },
+                {
+                    typingMs: 3500,
+                    text: "I want to check whether that feels like something that could work for you, or whether there is something about your evenings that might make it harder to try. What does that part of your day usually look like?"
+                }
+            ]
+        },
+
+        // ── User Turn 4 ────────────────────────────
+        {
+            type: 'user',
+            text: "That actually sounds like it could help. My evenings are usually pretty unstructured so I think I could try it."
+        },
+
+        // ── AI Turn 5 (final) ──────────────────────
+        {
+            type: 'ai',
+            interMsgMs: 900,
+            readLockMs: 0,   // last turn — no Continue button
+            msgs: [
+                {
+                    typingMs: 3500,
+                    text: "I am glad that feels like a possible fit, and the fact that your evenings are unstructured actually works in your favour here — there is room to build something in without it clashing with an existing routine."
+                },
+                {
+                    typingMs: 5500,
+                    text: "Since you mentioned that the repetitive thoughts are specifically about deadlines and unfinished tasks, it would be worth making the worry-offload as concrete as possible. Writing down not just what is unfinished but one very small next action for each thing can help your mind register that there is a plan rather than just an open loop. Would it help to talk through what that might look like on a typical evening for you, or does that give you enough to try it out on your own?"
+                }
+            ]
+        }
+    ];
+
+    // ─────────────────────────────────────────
+    // DOM
+    // ─────────────────────────────────────────
+    const msgsEl    = document.getElementById('msgs');
+    const footerEl  = document.getElementById('footer');
+    const continueBtn = document.getElementById('continue-btn');
+    const btnLabel  = document.getElementById('btn-label');
+
+    let pointer = 0;        // current index in SCRIPT
+    let cdInterval = null;  // countdown setInterval handle
+
+    // ─────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────
+    const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function scrollDown() {
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+
+    function addSeparator(text) {
+        const el = document.createElement('div');
+        el.className = 'day-sep';
+        el.textContent = text;
+        msgsEl.appendChild(el);
+        setTimeout(() => el.classList.add('visible'), 60);
+        scrollDown();
+    }
+
+    /**
+     * Renders a chat bubble row.
+     * @param {'ai'|'user'} sender
+     * @param {string} text
+     * @param {boolean} ghostAvatar  - hide avatar (but preserve spacing) for consecutive AI msgs
+     */
+    function addBubble(sender, text, ghostAvatar = false) {
+        const isAI = sender === 'ai';
+        const row  = document.createElement('div');
+        row.className = `msg-row msg-${sender}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = `avatar avatar-${sender}${ghostAvatar ? ' avatar-ghost' : ''}`;
+        avatar.textContent = isAI ? '🌿' : 'You';
+
+        const group  = document.createElement('div');
+        group.className = 'msg-group';
+
+        const bubble = document.createElement('div');
+        bubble.className = `bubble bubble-${sender}`;
+        bubble.textContent = text;
+
+        const ts = document.createElement('div');
+        ts.className = 'ts';
+        ts.textContent = now();
+
+        group.appendChild(bubble);
+        group.appendChild(ts);
+
+        if (isAI) { row.appendChild(avatar); row.appendChild(group); }
+        else       { row.appendChild(group);  row.appendChild(avatar); }
+
+        msgsEl.appendChild(row);
+        scrollDown();
+        requestAnimationFrame(() => setTimeout(() => row.classList.add('visible'), 40));
+    }
+
+    function showTyping() {
+        const row = document.createElement('div');
+        row.id = 'typing';
+        row.className = 'msg-row msg-ai visible';
+        row.innerHTML = `
+            <div class="avatar avatar-ai">🌿</div>
+            <div class="bubble bubble-ai">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>`;
+        msgsEl.appendChild(row);
+        scrollDown();
+    }
+
+    function hideTyping() {
+        const el = document.getElementById('typing');
+        if (el) el.remove();
+    }
+
+    // ─────────────────────────────────────────
+    // CONTINUE BUTTON
+    // ─────────────────────────────────────────
+    function showContinue(lockMs) {
+        footerEl.classList.remove('hidden');
+        continueBtn.disabled = true;
+
+        // Remove stale countdown badge
+        const old = continueBtn.querySelector('.countdown');
+        if (old) old.remove();
+
+        if (lockMs <= 0) {
+            continueBtn.disabled = false;
+            return;
+        }
+
+        let secs = Math.ceil(lockMs / 1000);
+        const badge = document.createElement('span');
+        badge.className = 'countdown';
+        badge.textContent = `(${secs}s)`;
+        // Insert before the arrow
+        continueBtn.insertBefore(badge, continueBtn.querySelector('.btn-arrow'));
+
+        cdInterval = setInterval(() => {
+            secs--;
+            if (secs <= 0) {
+                clearInterval(cdInterval);
+                badge.remove();
+                continueBtn.disabled = false;
+            } else {
+                badge.textContent = `(${secs}s)`;
+            }
+        }, 1000);
+    }
+
+    function hideContinue() {
+        footerEl.classList.add('hidden');
+        continueBtn.disabled = true;
+        if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
+        const badge = continueBtn.querySelector('.countdown');
+        if (badge) badge.remove();
+    }
+
+    // ─────────────────────────────────────────
+    // AI TURN PLAYBACK
+    // ─────────────────────────────────────────
+    async function playAITurn(turn) {
+        for (let i = 0; i < turn.msgs.length; i++) {
+            const m = turn.msgs[i];
+            showTyping();
+            await sleep(m.typingMs);
+            hideTyping();
+            addBubble('ai', m.text, i > 0);   // ghost avatar for 2nd+ bubbles
+            if (i < turn.msgs.length - 1) {
+                await sleep(turn.interMsgMs);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // MAIN DRIVER
+    // ─────────────────────────────────────────
+    async function advance() {
+        if (pointer >= SCRIPT.length) { hideContinue(); return; }
+
+        const item = SCRIPT[pointer++];
+
+        if (item.type === 'sep') {
+            addSeparator(item.text);
+            await sleep(400);
+            advance();
+            return;
+        }
+
+        if (item.type === 'ai') {
+            hideContinue();
+            await playAITurn(item);
+
+            // Is the next item a user turn? → show Continue
+            const next = SCRIPT[pointer];
+            if (next && next.type === 'user') {
+                showContinue(item.readLockMs);
+                // advance() will be triggered by button click (see handler below)
+            }
+            // If no next user turn (final AI turn), just stop — no button shown
+            return;
+        }
+
+        if (item.type === 'user') {
+            hideContinue();
+            addBubble('user', item.text);
+            await sleep(1300);
+            advance();
+        }
+    }
+
+    // ─────────────────────────────────────────
+    // CONTINUE BUTTON HANDLER
+    // ─────────────────────────────────────────
+    continueBtn.addEventListener('click', () => {
+        if (continueBtn.disabled) return;
+        // Next item should be a user turn
+        const next = SCRIPT[pointer];
+        if (next && next.type === 'user') advance();
+    });
+
+    // ─────────────────────────────────────────
+    // KICK OFF
+    // ─────────────────────────────────────────
+    setTimeout(advance, 700);
+});
+</script>
+</body>
+</html>
