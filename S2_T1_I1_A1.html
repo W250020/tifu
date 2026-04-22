@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -254,6 +255,36 @@
             50%       { transform: translateX(3px); }
         }
         .countdown { font-size: .78em; opacity: .68; font-variant-numeric: tabular-nums; }
+
+        /* ── End card ── */
+        .end-card {
+            margin: 10px 2px 4px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(124,158,143,.1), rgba(196,168,130,.08));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity .55s ease, transform .55s ease;
+        }
+        .end-card.visible { opacity: 1; transform: translateY(0); }
+        .end-card-title {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+        .end-card-body {
+            font-size: 0.8em;
+            color: var(--text-soft);
+            line-height: 1.55;
+        }
+        .end-card-body strong {
+            color: var(--accent-dk);
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -559,6 +590,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ─────────────────────────────────────────
+    // END CARD
+    // ─────────────────────────────────────────
+    function addEndCard() {
+        const card = document.createElement('div');
+        card.className = 'end-card';
+        card.innerHTML = `
+            <div class="end-card-title">The conversation has ended</div>
+            <div class="end-card-body">
+                Please return to the survey and click <strong>Next</strong> to continue.
+            </div>`;
+        msgsEl.appendChild(card);
+        scrollDown();
+        setTimeout(() => card.classList.add('visible'), 60);
+    }
+
+        // ─────────────────────────────────────────
     // MAIN DRIVER
     // ─────────────────────────────────────────
     async function advance() {
@@ -581,9 +628,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const next = SCRIPT[pointer];
             if (next && next.type === 'user') {
                 showContinue(item.readLockMs);
-                // advance() will be triggered by button click (see handler below)
+            } else {
+                setTimeout(addEndCard, 800);
             }
-            // If no next user turn (final AI turn), just stop — no button shown
             return;
         }
 
