@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 {
                     typingMs: 5000,
-                    text: "What you described points clearly to nighttime as the hardest moment — when the mind will not settle and the day's demands stay present. Because that is where things feel most difficult for you specifically, I want to focus there rather than approach stress in general. That shapes the kind of support I will suggest."
+                    text: "What you described points clearly to nighttime as the hardest moment, when the mind will not settle and the day's demands stay present. Because that is where things feel most difficult for you specifically, I want to focus there rather than approach stress in general. That shapes the kind of support I will suggest."
                 },
                 {
                     typingMs: 4500,
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 {
                     typingMs: 6500,
-                    text: "Because you described the thoughts as coming up specifically around things still left to do — rather than a more diffuse sense of anxiety — I want to suggest something targeted at that pattern rather than a general approach to relaxation. One thing that can help is finding a way to move those thoughts out of your head and onto something concrete before you try to sleep. This might mean writing down what is still on your mind and noting one small next step for each item, so your mind has somewhere to land those thoughts rather than continuing to cycle through them."
+                    text: "Because you described the thoughts as coming up specifically around things still left to do, rather than a more diffuse sense of anxiety, I want to suggest something targeted at that pattern rather than a general approach to relaxation. One thing that can help is finding a way to move those thoughts out of your head and onto something concrete before you try to sleep. This might mean writing down what is still on your mind and noting one small next step for each item, so your mind has somewhere to land those thoughts rather than continuing to cycle through them."
                 },
                 {
                     typingMs: 3500,
@@ -430,18 +430,27 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             type: 'ai',
             interMsgMs: 900,
-            readLockMs: 0,   // last turn — no Continue button
+            readLockMs: 6000, // now followed by final user turn
             msgs: [
                 {
                     typingMs: 3500,
-                    text: "I am glad that feels like a possible fit, and the fact that your evenings are unstructured actually works in your favour here — there is room to build something in without it clashing with an existing routine."
+                    text: "I am glad that feels like a possible fit, and the fact that your evenings are unstructured actually works in your favour here, as there is room to build something in without it clashing with an existing routine."
                 },
                 {
                     typingMs: 5500,
-                    text: "Since you mentioned that the thoughts are specifically about deadlines and things left unfinished, it is worth being as concrete as possible when you do this — writing down not just what is unfinished but one very small next step for each thing, so your mind can register that there is somewhere for those thoughts to go. Even something small done consistently can make a real difference, and I hope this gives you something useful to work with."
+                    text: "Since you mentioned that the thoughts are specifically about deadlines and things left unfinished, it is worth being as concrete as possible when you do this, writing down not just what is unfinished but one very small next step for each thing, so your mind can register that there is somewhere for those thoughts to go. Even something small done consistently can make a real difference, and I hope this gives you something useful to work with."
                 }
             ]
-        }
+        },
+
+        // ── User Turn 5 (final) ────────────────────────
+        {
+            type: 'user',
+            text: "Thank you, that gives me something to work with."
+        },
+
+        // ── End marker ─────────────────────────────────
+        { type: 'end' }
     ];
 
     // ─────────────────────────────────────────
@@ -611,6 +620,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function advance() {
         if (pointer >= SCRIPT.length) { hideContinue(); return; }
 
+        // Peek: handle end marker
+        if (SCRIPT[pointer].type === 'end') {
+            pointer++;
+            setTimeout(addEndCard, 500);
+            return;
+        }
+
         const item = SCRIPT[pointer++];
 
         if (item.type === 'sep') {
@@ -629,7 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (next && next.type === 'user') {
                 showContinue(item.readLockMs);
             } else {
-                setTimeout(addEndCard, 800);
+                // Safety fallback: should not reach here with end marker in SCRIPT
+                setTimeout(addEndCard, 500);
             }
             return;
         }
