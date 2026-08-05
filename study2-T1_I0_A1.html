@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Condition: Study 2 | T1_I0_A1 -->
+    <title>Support Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #f2f4f6;
+            --surface:     #ffffff;
+            --border:      #e0e4e8;
+            --accent:      #4a7cbc;
+            --accent-dk:   #3a6aaa;
+            --text:        #1f2937;
+            --text-soft:   #6b7280;
+            --bubble-ai:   #ffffff;
+            --bubble-user: #374151;
+            --user-text:   #f9fafb;
+            --shadow:      0 2px 12px rgba(0,0,0,0.08);
+            --r:           16px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 32px 16px 48px;
+            color: var(--text);
+        }
+
+        .app {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: calc(100vh - 80px);
+        }
+
+        /* Scenario card */
+        .scenario-card {
+            flex-shrink: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 10px;
+            padding: 13px 16px;
+            box-shadow: var(--shadow);
+        }
+        .scenario-label {
+            font-size: 0.67em;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .scenario-text {
+            font-size: 0.84em;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Chat shell */
+        .chat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+        .h-avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.70em;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .h-name {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .h-status {
+            font-size: 0.72em;
+            color: var(--text-soft);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        /* Messages area */
+        .chat-messages {
+            flex-grow: 1;
+            padding: 16px 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* Message rows */
+        .msg-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .msg-row.visible  { opacity: 1; transform: translateY(0); }
+        .msg-row.msg-ai   { justify-content: flex-start; }
+        .msg-row.msg-user { justify-content: flex-end; }
+
+        .avatar {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.62em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+        }
+        .avatar-ai    { background: var(--accent); color: #fff; }
+        .avatar-user  { background: var(--bubble-user); color: var(--user-text); }
+        .avatar-ghost { visibility: hidden; }
+
+        .msg-group { display: flex; flex-direction: column; max-width: 80%; }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.875em;
+            line-height: 1.65;
+            word-wrap: break-word;
+        }
+        .bubble-ai {
+            background: var(--bubble-ai);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .bubble-user {
+            background: var(--bubble-user);
+            color: var(--user-text);
+            border-bottom-right-radius: 4px;
+        }
+
+        .ts {
+            font-size: 0.63em;
+            color: var(--text-soft);
+            opacity: 0.5;
+            margin-top: 3px;
+        }
+        .msg-ai  .ts { padding-left: 2px; }
+        .msg-user .ts { text-align: right; padding-right: 2px; }
+
+        /* Typing indicator */
+        .typing-dots {
+            display: flex; align-items: center; gap: 4px;
+            padding: 10px 14px;
+        }
+        .typing-dots span {
+            width: 7px; height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0.38;
+            animation: dot-bounce 1.3s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .16s; }
+        .typing-dots span:nth-child(3) { animation-delay: .32s; }
+        @keyframes dot-bounce {
+            0%, 60%, 100% { transform: translateY(0);   opacity: .35; }
+            30%            { transform: translateY(-6px); opacity: 1;   }
+        }
+
+        /* Day separator */
+        .day-sep {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.67em;
+            color: var(--text-soft);
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin: 4px 0;
+            opacity: 0;
+            transition: opacity .4s .1s;
+        }
+        .day-sep.visible { opacity: 1; }
+        .day-sep::before, .day-sep::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Footer */
+        .chat-footer {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            min-height: 56px;
+            background: var(--surface);
+            transition: opacity .22s;
+        }
+        .chat-footer.hidden { opacity: 0; pointer-events: none; }
+
+        /* Continue button */
+        #continue-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.84em;
+            font-weight: 500;
+            padding: 9px 20px;
+            border-radius: 20px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: background .2s, transform .15s;
+        }
+        #continue-btn:hover:not(:disabled) {
+            background: var(--accent-dk);
+            transform: translateX(2px);
+        }
+        #continue-btn:disabled {
+            background: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-arrow { font-size: .9em; }
+        #continue-btn:disabled .btn-arrow { display: none; }
+        #continue-btn:not(:disabled) .btn-arrow {
+            animation: nudge 1.6s ease-in-out infinite;
+        }
+        @keyframes nudge {
+            0%, 100% { transform: translateX(0); }
+            50%       { transform: translateX(3px); }
+        }
+
+        .btn-countdown {
+            font-size: .74em;
+            opacity: .60;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Choice mode (autonomy-supportive: illusory choice) */
+        .chat-footer.choices-mode {
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            min-height: auto;
+        }
+        .choice-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+        .choice-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82em;
+            line-height: 1.4;
+            text-align: left;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: background .18s, border-color .18s;
+        }
+        .choice-btn:hover {
+            background: var(--bg);
+            border-color: var(--accent);
+        }
+
+        /* End card */
+        .end-card {
+            margin: 8px 2px 4px;
+            padding: 15px 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity .48s ease, transform .48s ease;
+        }
+        .end-card.visible { opacity: 1; transform: translateY(0); }
+        .end-card-title {
+            font-size: 0.87em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+        .end-card-body {
+            font-size: 0.78em;
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+        .end-card-body strong {
+            color: var(--accent-dk);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <div class="scenario-card">
+        <div class="scenario-label">Scenario</div>
+        <div class="scenario-text">Imagine you are using a mental health support chatbot. You have been feeling low in mood and the chatbot suggests that physical activity might help. You decide to ask it for advice on how to get more active.</div>
+    </div>
+
+    <div class="chat">
+
+        <div class="chat-header">
+            <div class="h-avatar">SA</div>
+            <div>
+                <div class="h-name">Support Assistant</div>
+                <div class="h-status"><span class="status-dot"></span>Online</div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="msgs"></div>
+
+        <div class="chat-footer" id="footer">
+            <button id="continue-btn">
+                <span id="btn-label">Continue</span>
+                <span class="btn-arrow">→</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    function countWords(str) {
+        return str.trim().split(/\s+/).filter(Boolean).length;
+    }
+    function calcTypingMs(words) {
+        return Math.min(5000, Math.max(1800, words * 65));
+    }
+    function calcReadLockMs(turnWords) {
+        return Math.max(4500, 3000 + turnWords * 70);
+    }
+    const INTER_MSG_MS = 1000;
+
+    // RAW SCRIPT — Study 2 | T1_I0_A1
+    const rawScript = [
+        {
+                "type": "sep",
+                "text": "Today"
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Hi there! I am glad you decided to explore this further. Physical activity can be a really useful tool when mood has been low. To help me give you the most useful advice, could you tell me a bit about your current situation and what has been making it hard to get more active?"
+                ]
+        },
+        {
+                "type": "user",
+                "text": "I have been feeling pretty low lately and I know I should try to get more active, but I just do not know where to begin. I do not have much free time, and I have not properly exercised in years."
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Thank you for sharing that.",
+                        "You mentioned feeling low in mood, not knowing where to begin, having limited free time, and not having exercised in years — I want to make sure what I suggest takes all of that into account.",
+                        "I would suggest three starting points: short daily walks, which are easy to fit into almost any routine and require no equipment or preparation; gentle stretching at home, which can be done without travel and fits into most home environments without any special setup; and revisiting a form of activity you used to enjoy, which is often a more accessible way to return to movement than starting something entirely new.",
+                        "It makes complete sense that getting started feels difficult — that is a really common experience, and it is okay to take things at whatever pace feels right."
+                ]
+        },
+        {
+                "type": "choice",
+                "options": [
+                        "I would like to start with the short daily walks.",
+                        "I would like to try gentle stretching at home first.",
+                        "I would like to revisit an activity I used to enjoy."
+                ]
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Those are all good options to work with. Walks are particularly useful as a starting point for most people returning to activity, so let me share some practical guidance on those first.",
+                        "Since you mentioned that free time is limited and that you have not exercised properly in years, I want to suggest an approach that is realistic for where you are starting from.",
+                        "Starting with ten to fifteen minutes is a manageable and realistic target for someone returning to exercise after a long period away. Morning tends to work well for many people and is a common time for building a consistent routine. Starting with a short duration is a common recommendation and allows the routine to build naturally over time, and the time can be extended naturally as the habit becomes established.",
+                        "That said, you know your own schedule better than I do. If mornings do not work for you, going at lunchtime or in the evening are equally valid options. You could also start with just five or ten minutes if fifteen feels like too much right now — what matters most is finding a time and duration that feel genuinely workable for you."
+                ]
+        },
+        {
+                "type": "choice",
+                "options": [
+                        "I think mornings would work best for me.",
+                        "A lunchtime session seems more realistic.",
+                        "I would rather go in the evening after work."
+                ]
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "That is a great choice — any of those times can work well. One thing worth thinking about as you get started is how to keep the routine going beyond the first few days.",
+                        "Given what you mentioned about limited time and a long gap since you last exercised, the most practical strategy for staying consistent is one that works within those constraints from the very start.",
+                        "One approach is to attach it to something you already do every day — a technique sometimes called habit stacking, which is widely recommended for building new routines. Keeping a simple record — such as a tick on a calendar for each day you complete it — is something many people find useful for staying on track over a longer period of time. Starting at a level that feels easy and comfortable is a common recommendation, especially in the early stages when the habit is still forming.",
+                        "You are the one who decides how structured or flexible the approach is, and adjusting it to suit your life as you go is entirely reasonable. The goal is for this to feel workable rather than like another obligation."
+                ]
+        },
+        {
+                "type": "choice",
+                "options": [
+                        "How long should I give this before I notice a difference in my mood?",
+                        "What if my mood does not improve even after trying all of this?",
+                        "How will I know if the physical activity is actually helping?"
+                ]
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "That is a really important thing to think about as you get started.",
+                        "Given what you shared about your mood having been low for a while and this being a return to exercise after a long gap, the timeline I would suggest takes both of those things into account.",
+                        "There is no single timeline that applies to everyone, and responses to physical activity tend to vary quite a bit from person to person. A few weeks is generally a reasonable window to give it before drawing any conclusions either way. Keeping a simple note of how you feel on days when you do and do not exercise can make it easier to notice any patterns over time. If things do not feel meaningfully different after that point, exploring other forms of support alongside physical activity is worth considering.",
+                        "You are the best judge of how you are feeling, so it is worth paying attention to your own sense of what is and is not changing. If after a few weeks physical activity feels like it is helping but not enough on its own, that is a valid signal. Deciding to explore additional support alongside it is entirely your call.",
+                        "I hope this gives you a useful place to start. Do let me know if you would like to explore anything further."
+                ]
+        },
+        {
+                "type": "user",
+                "text": "Thank you. This has been really helpful."
+        },
+        {
+                "type": "end"
+        }
+];
+
+    const SCRIPT = rawScript.map(item => {
+        if (item.type !== 'ai') return item;
+        const msgs = item.msgs.map(text => ({
+            text,
+            typingMs: calcTypingMs(countWords(text))
+        }));
+        const turnWords = msgs.reduce((sum, m) => sum + countWords(m.text), 0);
+        return {
+            type:       'ai',
+            msgs,
+            interMsgMs: INTER_MSG_MS,
+            readLockMs: calcReadLockMs(turnWords)
+        };
+    });
+
+    const msgsEl      = document.getElementById('msgs');
+    const footerEl    = document.getElementById('footer');
+    const continueBtn = document.getElementById('continue-btn');
+
+    let pointer    = 0;
+    let cdInterval = null;
+
+    const now      = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sleep    = ms => new Promise(r => setTimeout(r, ms));
+    const scrollDown = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
+
+    function addSeparator(text) {
+        const el = document.createElement('div');
+        el.className = 'day-sep';
+        el.textContent = text;
+        msgsEl.appendChild(el);
+        setTimeout(() => el.classList.add('visible'), 60);
+        scrollDown();
+    }
+
+    function addBubble(sender, text, ghostAvatar = false) {
+        const isAI = sender === 'ai';
+        const row  = document.createElement('div');
+        row.className = `msg-row msg-${sender}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = `avatar avatar-${sender}${ghostAvatar ? ' avatar-ghost' : ''}`;
+        avatar.textContent = isAI ? 'SA' : 'You';
+
+        const group = document.createElement('div');
+        group.className = 'msg-group';
+
+        const bubble = document.createElement('div');
+        bubble.className = `bubble bubble-${sender}`;
+        bubble.textContent = text;
+
+        const ts = document.createElement('div');
+        ts.className = 'ts';
+        ts.textContent = now();
+
+        group.appendChild(bubble);
+        group.appendChild(ts);
+
+        if (isAI) { row.appendChild(avatar); row.appendChild(group); }
+        else       { row.appendChild(group);  row.appendChild(avatar); }
+
+        msgsEl.appendChild(row);
+        scrollDown();
+        requestAnimationFrame(() => setTimeout(() => row.classList.add('visible'), 40));
+    }
+
+    function showTyping() {
+        const row = document.createElement('div');
+        row.id = 'typing';
+        row.className = 'msg-row msg-ai visible';
+        row.innerHTML = `
+            <div class="avatar avatar-ai">SA</div>
+            <div class="bubble bubble-ai">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>`;
+        msgsEl.appendChild(row);
+        scrollDown();
+    }
+
+    function hideTyping() {
+        const el = document.getElementById('typing');
+        if (el) el.remove();
+    }
+
+    function showContinue(lockMs) {
+        footerEl.classList.remove('hidden');
+        continueBtn.disabled = true;
+
+        const old = continueBtn.querySelector('.btn-countdown');
+        if (old) old.remove();
+
+        if (lockMs <= 0) {
+            continueBtn.disabled = false;
+            return;
+        }
+
+        let secs = Math.ceil(lockMs / 1000);
+
+        const badge = document.createElement('span');
+        badge.className = 'btn-countdown';
+        badge.textContent = `(${secs}s)`;
+        continueBtn.insertBefore(badge, continueBtn.querySelector('.btn-arrow'));
+
+        cdInterval = setInterval(() => {
+            secs--;
+            if (secs <= 0) {
+                clearInterval(cdInterval);
+                badge.remove();
+                continueBtn.disabled = false;
+            } else {
+                badge.textContent = `(${secs}s)`;
+            }
+        }, 1000);
+    }
+
+    function hideContinue() {
+        footerEl.classList.add('hidden');
+        continueBtn.disabled = true;
+        if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
+        const badge = continueBtn.querySelector('.btn-countdown');
+        if (badge) badge.remove();
+    }
+
+    function showChoices(options) {
+        footerEl.classList.remove('hidden');
+        footerEl.classList.add('choices-mode');
+        continueBtn.style.display = 'none';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'choice-wrap';
+        wrap.id = 'choice-wrap';
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = opt;
+            btn.addEventListener('click', () => selectChoice(opt));
+            wrap.appendChild(btn);
+        });
+
+        footerEl.appendChild(wrap);
+    }
+
+    function hideChoices() {
+        footerEl.classList.remove('choices-mode');
+        continueBtn.style.display = '';
+        const wrap = document.getElementById('choice-wrap');
+        if (wrap) wrap.remove();
+    }
+
+    async function selectChoice(text) {
+        hideChoices();
+        footerEl.classList.add('hidden');
+        addBubble('user', text);
+        await sleep(1300);
+        advance();
+    }
+
+    async function playAITurn(turn) {
+        for (let i = 0; i < turn.msgs.length; i++) {
+            const m = turn.msgs[i];
+            showTyping();
+            await sleep(m.typingMs);
+            hideTyping();
+            addBubble('ai', m.text, i > 0);
+            if (i < turn.msgs.length - 1) await sleep(turn.interMsgMs);
+        }
+    }
+
+    function addEndCard() {
+        const card = document.createElement('div');
+        card.className = 'end-card';
+        card.innerHTML = `
+            <div class="end-card-title">The conversation has ended</div>
+            <div class="end-card-body">
+                Please return to the survey and click <strong>Next</strong> to continue.
+            </div>`;
+        msgsEl.appendChild(card);
+        scrollDown();
+        setTimeout(() => card.classList.add('visible'), 60);
+    }
+
+    async function advance() {
+        if (pointer >= SCRIPT.length) { hideContinue(); return; }
+
+        if (SCRIPT[pointer].type === 'end') {
+            pointer++;
+            setTimeout(addEndCard, 500);
+            return;
+        }
+
+        const item = SCRIPT[pointer++];
+
+        if (item.type === 'sep') {
+            addSeparator(item.text);
+            await sleep(400);
+            advance();
+            return;
+        }
+
+        if (item.type === 'ai') {
+            hideContinue();
+            await playAITurn(item);
+            const next = SCRIPT[pointer];
+            if (next && next.type === 'choice') {
+                pointer++;
+                showChoices(next.options);
+            } else if (next && next.type === 'user') {
+                showContinue(item.readLockMs);
+            } else {
+                setTimeout(addEndCard, 500);
+            }
+            return;
+        }
+
+        if (item.type === 'user') {
+            hideContinue();
+            addBubble('user', item.text);
+            await sleep(1300);
+            advance();
+        }
+
+        // 'choice' items are rendered by showChoices() right after the
+        // preceding AI turn; selectChoice() advances the pointer on click.
+    }
+
+    continueBtn.addEventListener('click', () => {
+        if (continueBtn.disabled) return;
+        const next = SCRIPT[pointer];
+        if (next && next.type === 'user') advance();
+    });
+
+    setTimeout(advance, 700);
+});
+</script>
+
+</body>
+</html>

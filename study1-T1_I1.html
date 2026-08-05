@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Condition: Study 1 | T1_I1 -->
+    <title>Support Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #f2f4f6;
+            --surface:     #ffffff;
+            --border:      #e0e4e8;
+            --accent:      #4a7cbc;
+            --accent-dk:   #3a6aaa;
+            --text:        #1f2937;
+            --text-soft:   #6b7280;
+            --bubble-ai:   #ffffff;
+            --bubble-user: #374151;
+            --user-text:   #f9fafb;
+            --shadow:      0 2px 12px rgba(0,0,0,0.08);
+            --r:           16px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 32px 16px 48px;
+            color: var(--text);
+        }
+
+        .app {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: calc(100vh - 80px);
+        }
+
+        /* Scenario card */
+        .scenario-card {
+            flex-shrink: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 10px;
+            padding: 13px 16px;
+            box-shadow: var(--shadow);
+        }
+        .scenario-label {
+            font-size: 0.67em;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .scenario-text {
+            font-size: 0.84em;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Chat shell */
+        .chat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+        .h-avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.70em;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .h-name {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .h-status {
+            font-size: 0.72em;
+            color: var(--text-soft);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        /* Messages area */
+        .chat-messages {
+            flex-grow: 1;
+            padding: 16px 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* Message rows */
+        .msg-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .msg-row.visible  { opacity: 1; transform: translateY(0); }
+        .msg-row.msg-ai   { justify-content: flex-start; }
+        .msg-row.msg-user { justify-content: flex-end; }
+
+        .avatar {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.62em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+        }
+        .avatar-ai    { background: var(--accent); color: #fff; }
+        .avatar-user  { background: var(--bubble-user); color: var(--user-text); }
+        .avatar-ghost { visibility: hidden; }
+
+        .msg-group { display: flex; flex-direction: column; max-width: 80%; }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.875em;
+            line-height: 1.65;
+            word-wrap: break-word;
+        }
+        .bubble-ai {
+            background: var(--bubble-ai);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .bubble-user {
+            background: var(--bubble-user);
+            color: var(--user-text);
+            border-bottom-right-radius: 4px;
+        }
+
+        .ts {
+            font-size: 0.63em;
+            color: var(--text-soft);
+            opacity: 0.5;
+            margin-top: 3px;
+        }
+        .msg-ai  .ts { padding-left: 2px; }
+        .msg-user .ts { text-align: right; padding-right: 2px; }
+
+        /* Typing indicator */
+        .typing-dots {
+            display: flex; align-items: center; gap: 4px;
+            padding: 10px 14px;
+        }
+        .typing-dots span {
+            width: 7px; height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0.38;
+            animation: dot-bounce 1.3s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .16s; }
+        .typing-dots span:nth-child(3) { animation-delay: .32s; }
+        @keyframes dot-bounce {
+            0%, 60%, 100% { transform: translateY(0);   opacity: .35; }
+            30%            { transform: translateY(-6px); opacity: 1;   }
+        }
+
+        /* Day separator */
+        .day-sep {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.67em;
+            color: var(--text-soft);
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin: 4px 0;
+            opacity: 0;
+            transition: opacity .4s .1s;
+        }
+        .day-sep.visible { opacity: 1; }
+        .day-sep::before, .day-sep::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Footer */
+        .chat-footer {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            min-height: 56px;
+            background: var(--surface);
+            transition: opacity .22s;
+        }
+        .chat-footer.hidden { opacity: 0; pointer-events: none; }
+
+        /* Continue button */
+        #continue-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.84em;
+            font-weight: 500;
+            padding: 9px 20px;
+            border-radius: 20px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: background .2s, transform .15s;
+        }
+        #continue-btn:hover:not(:disabled) {
+            background: var(--accent-dk);
+            transform: translateX(2px);
+        }
+        #continue-btn:disabled {
+            background: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-arrow { font-size: .9em; }
+        #continue-btn:disabled .btn-arrow { display: none; }
+        #continue-btn:not(:disabled) .btn-arrow {
+            animation: nudge 1.6s ease-in-out infinite;
+        }
+        @keyframes nudge {
+            0%, 100% { transform: translateX(0); }
+            50%       { transform: translateX(3px); }
+        }
+
+        .btn-countdown {
+            font-size: .74em;
+            opacity: .60;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Choice mode (autonomy-supportive: illusory choice) */
+        .chat-footer.choices-mode {
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            min-height: auto;
+        }
+        .choice-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+        .choice-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82em;
+            line-height: 1.4;
+            text-align: left;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: background .18s, border-color .18s;
+        }
+        .choice-btn:hover {
+            background: var(--bg);
+            border-color: var(--accent);
+        }
+
+        /* End card */
+        .end-card {
+            margin: 8px 2px 4px;
+            padding: 15px 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity .48s ease, transform .48s ease;
+        }
+        .end-card.visible { opacity: 1; transform: translateY(0); }
+        .end-card-title {
+            font-size: 0.87em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+        .end-card-body {
+            font-size: 0.78em;
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+        .end-card-body strong {
+            color: var(--accent-dk);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <div class="scenario-card">
+        <div class="scenario-label">Scenario</div>
+        <div class="scenario-text">Imagine you are using a mental health support chatbot. You have been feeling stressed lately and decide to ask it for advice on how to manage your stress.</div>
+    </div>
+
+    <div class="chat">
+
+        <div class="chat-header">
+            <div class="h-avatar">SA</div>
+            <div>
+                <div class="h-name">Support Assistant</div>
+                <div class="h-status"><span class="status-dot"></span>Online</div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="msgs"></div>
+
+        <div class="chat-footer" id="footer">
+            <button id="continue-btn">
+                <span id="btn-label">Continue</span>
+                <span class="btn-arrow">→</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    function countWords(str) {
+        return str.trim().split(/\s+/).filter(Boolean).length;
+    }
+    function calcTypingMs(words) {
+        return Math.min(5000, Math.max(1800, words * 65));
+    }
+    function calcReadLockMs(turnWords) {
+        return Math.max(4500, 3000 + turnWords * 70);
+    }
+    const INTER_MSG_MS = 1000;
+
+    // RAW SCRIPT — Study 1 | T1_I1
+    const rawScript = [
+        {
+                "type": "sep",
+                "text": "Today"
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
+                ]
+        },
+        {
+                "type": "user",
+                "text": "I have been really stressed because of work. There is a big project deadline coming up, and it has been making it hard to sleep. I also do not have much free time during the day."
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Thank you for sharing that.",
+                        "You mentioned a work deadline, sleep difficulties, and limited time during the day, so I want to make sure what I suggest fits your situation.",
+                        "I would suggest three things: brief breathing exercises, because slow breathing activates your body's relaxation response and directly counteracts stress; a short walk during a break, because physical movement clears stress hormones and can shift mood within minutes; and a wind-down routine before bed, because a consistent pre-sleep signal helps quiet a mind that stays active when pressure is high."
+                ]
+        },
+        {
+                "type": "user",
+                "text": "The breathing exercises sound useful. Can you tell me more about how to do them?"
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Of course.",
+                        "Since you mentioned time is limited and sleep has been difficult, I want to suggest a technique that is easy to do anywhere and calming enough to use before bed.",
+                        "It is called box breathing: breathe in for four counts, hold for four, breathe out for four, and hold for four again. This works by giving your nervous system a structured rhythm, which interrupts the stress response and brings your body into a calmer state. It is also effective before bed because slowing your breath signals the body to move toward a resting state."
+                ]
+        },
+        {
+                "type": "user",
+                "text": "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "That is understandable.",
+                        "Given what you mentioned about limited break time and sleep difficulties, the short walk I suggested earlier is the most practical alternative for your situation.",
+                        "Walking away from your workspace creates a change of environment, which interrupts the mental cycle that keeps stress active. Even five minutes is enough to lower cortisol noticeably. Keeping movement light is important, as vigorous activity in the evening raises the body's arousal level and can make winding down harder."
+                ]
+        },
+        {
+                "type": "user",
+                "text": "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
+        },
+        {
+                "type": "ai",
+                "msgs": [
+                        "Sleep difficulties tied to the deadline pressure you mentioned often ease once that pressure resolves, so it is worth giving these approaches some time.",
+                        "A practical addition is writing down tomorrow's tasks before bed. This gives pending thoughts a concrete place to land, which tends to quiet the planning activity that keeps the mind awake when there is unfinished work. A few minutes of light stretching beforehand can also lower physical arousal, which makes it progressively easier for your body to shift into a resting state.",
+                        "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
+                ]
+        },
+        {
+                "type": "user",
+                "text": "Thank you. This has been really helpful."
+        },
+        {
+                "type": "end"
+        }
+];
+
+    const SCRIPT = rawScript.map(item => {
+        if (item.type !== 'ai') return item;
+        const msgs = item.msgs.map(text => ({
+            text,
+            typingMs: calcTypingMs(countWords(text))
+        }));
+        const turnWords = msgs.reduce((sum, m) => sum + countWords(m.text), 0);
+        return {
+            type:       'ai',
+            msgs,
+            interMsgMs: INTER_MSG_MS,
+            readLockMs: calcReadLockMs(turnWords)
+        };
+    });
+
+    const msgsEl      = document.getElementById('msgs');
+    const footerEl    = document.getElementById('footer');
+    const continueBtn = document.getElementById('continue-btn');
+
+    let pointer    = 0;
+    let cdInterval = null;
+
+    const now      = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sleep    = ms => new Promise(r => setTimeout(r, ms));
+    const scrollDown = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
+
+    function addSeparator(text) {
+        const el = document.createElement('div');
+        el.className = 'day-sep';
+        el.textContent = text;
+        msgsEl.appendChild(el);
+        setTimeout(() => el.classList.add('visible'), 60);
+        scrollDown();
+    }
+
+    function addBubble(sender, text, ghostAvatar = false) {
+        const isAI = sender === 'ai';
+        const row  = document.createElement('div');
+        row.className = `msg-row msg-${sender}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = `avatar avatar-${sender}${ghostAvatar ? ' avatar-ghost' : ''}`;
+        avatar.textContent = isAI ? 'SA' : 'You';
+
+        const group = document.createElement('div');
+        group.className = 'msg-group';
+
+        const bubble = document.createElement('div');
+        bubble.className = `bubble bubble-${sender}`;
+        bubble.textContent = text;
+
+        const ts = document.createElement('div');
+        ts.className = 'ts';
+        ts.textContent = now();
+
+        group.appendChild(bubble);
+        group.appendChild(ts);
+
+        if (isAI) { row.appendChild(avatar); row.appendChild(group); }
+        else       { row.appendChild(group);  row.appendChild(avatar); }
+
+        msgsEl.appendChild(row);
+        scrollDown();
+        requestAnimationFrame(() => setTimeout(() => row.classList.add('visible'), 40));
+    }
+
+    function showTyping() {
+        const row = document.createElement('div');
+        row.id = 'typing';
+        row.className = 'msg-row msg-ai visible';
+        row.innerHTML = `
+            <div class="avatar avatar-ai">SA</div>
+            <div class="bubble bubble-ai">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>`;
+        msgsEl.appendChild(row);
+        scrollDown();
+    }
+
+    function hideTyping() {
+        const el = document.getElementById('typing');
+        if (el) el.remove();
+    }
+
+    function showContinue(lockMs) {
+        footerEl.classList.remove('hidden');
+        continueBtn.disabled = true;
+
+        const old = continueBtn.querySelector('.btn-countdown');
+        if (old) old.remove();
+
+        if (lockMs <= 0) {
+            continueBtn.disabled = false;
+            return;
+        }
+
+        let secs = Math.ceil(lockMs / 1000);
+
+        const badge = document.createElement('span');
+        badge.className = 'btn-countdown';
+        badge.textContent = `(${secs}s)`;
+        continueBtn.insertBefore(badge, continueBtn.querySelector('.btn-arrow'));
+
+        cdInterval = setInterval(() => {
+            secs--;
+            if (secs <= 0) {
+                clearInterval(cdInterval);
+                badge.remove();
+                continueBtn.disabled = false;
+            } else {
+                badge.textContent = `(${secs}s)`;
+            }
+        }, 1000);
+    }
+
+    function hideContinue() {
+        footerEl.classList.add('hidden');
+        continueBtn.disabled = true;
+        if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
+        const badge = continueBtn.querySelector('.btn-countdown');
+        if (badge) badge.remove();
+    }
+
+    function showChoices(options) {
+        footerEl.classList.remove('hidden');
+        footerEl.classList.add('choices-mode');
+        continueBtn.style.display = 'none';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'choice-wrap';
+        wrap.id = 'choice-wrap';
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = opt;
+            btn.addEventListener('click', () => selectChoice(opt));
+            wrap.appendChild(btn);
+        });
+
+        footerEl.appendChild(wrap);
+    }
+
+    function hideChoices() {
+        footerEl.classList.remove('choices-mode');
+        continueBtn.style.display = '';
+        const wrap = document.getElementById('choice-wrap');
+        if (wrap) wrap.remove();
+    }
+
+    async function selectChoice(text) {
+        hideChoices();
+        footerEl.classList.add('hidden');
+        addBubble('user', text);
+        await sleep(1300);
+        advance();
+    }
+
+    async function playAITurn(turn) {
+        for (let i = 0; i < turn.msgs.length; i++) {
+            const m = turn.msgs[i];
+            showTyping();
+            await sleep(m.typingMs);
+            hideTyping();
+            addBubble('ai', m.text, i > 0);
+            if (i < turn.msgs.length - 1) await sleep(turn.interMsgMs);
+        }
+    }
+
+    function addEndCard() {
+        const card = document.createElement('div');
+        card.className = 'end-card';
+        card.innerHTML = `
+            <div class="end-card-title">The conversation has ended</div>
+            <div class="end-card-body">
+                Please return to the survey and click <strong>Next</strong> to continue.
+            </div>`;
+        msgsEl.appendChild(card);
+        scrollDown();
+        setTimeout(() => card.classList.add('visible'), 60);
+    }
+
+    async function advance() {
+        if (pointer >= SCRIPT.length) { hideContinue(); return; }
+
+        if (SCRIPT[pointer].type === 'end') {
+            pointer++;
+            setTimeout(addEndCard, 500);
+            return;
+        }
+
+        const item = SCRIPT[pointer++];
+
+        if (item.type === 'sep') {
+            addSeparator(item.text);
+            await sleep(400);
+            advance();
+            return;
+        }
+
+        if (item.type === 'ai') {
+            hideContinue();
+            await playAITurn(item);
+            const next = SCRIPT[pointer];
+            if (next && next.type === 'choice') {
+                pointer++;
+                showChoices(next.options);
+            } else if (next && next.type === 'user') {
+                showContinue(item.readLockMs);
+            } else {
+                setTimeout(addEndCard, 500);
+            }
+            return;
+        }
+
+        if (item.type === 'user') {
+            hideContinue();
+            addBubble('user', item.text);
+            await sleep(1300);
+            advance();
+        }
+
+        // 'choice' items are rendered by showChoices() right after the
+        // preceding AI turn; selectChoice() advances the pointer on click.
+    }
+
+    continueBtn.addEventListener('click', () => {
+        if (continueBtn.disabled) return;
+        const next = SCRIPT[pointer];
+        if (next && next.type === 'user') advance();
+    });
+
+    setTimeout(advance, 700);
+});
+</script>
+
+</body>
+</html>
