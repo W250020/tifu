@@ -673,6 +673,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (SCRIPT[pointer].type === 'end') {
             pointer++;
             setTimeout(addEndCard, 500);
+            // Tell the parent Qualtrics page the stimulus is finished, so it
+            // can reveal its Next button. postMessage is required here since
+            // this page and the Qualtrics survey are different origins;
+            // direct DOM access across origins is blocked by the browser.
+            try {
+                window.parent.postMessage({ type: 'tifu-stimulus-complete' }, '*');
+            } catch (e) { /* no-op if not embedded in an iframe */ }
             return;
         }
 
