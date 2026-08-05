@@ -42,6 +42,7 @@
             flex-direction: column;
             gap: 12px;
             height: calc(100vh - 80px);
+            opacity: 0;
         }
 
         /* Scenario card */
@@ -381,6 +382,23 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+    // Access guard: only render when embedded via iframe from the Qualtrics
+    // survey. Blocks direct navigation to the raw link and forwarded links
+    // that bypass the survey flow. Runs after the full page has parsed, so
+    // replacing body content here fully removes the chat markup and stops
+    // the script below from ever running.
+    const inIframe = window.self !== window.top;
+    const fromQualtrics = document.referrer.includes('qualtrics.com');
+    if (!inIframe || !fromQualtrics) {
+        document.body.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;' +
+            'min-height:100vh;width:100%;">' +
+            '<p style="text-align:center;padding:0 24px;font-size:0.9em;color:#6b7280;">' +
+            'This page can only be accessed through the survey.</p></div>';
+        return;
+    }
+    document.querySelector('.app').style.opacity = '1';
 
     function countWords(str) {
         return str.trim().split(/\s+/).filter(Boolean).length;
