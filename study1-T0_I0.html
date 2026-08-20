@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Condition: Study 1 | T0_I0 -->
-    <title>Support Assistant</title>
+    <title>Chatbot</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -26,6 +26,7 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 17px;
             background-color: var(--bg);
             min-height: 100vh;
             display: flex;
@@ -42,7 +43,6 @@
             flex-direction: column;
             gap: 12px;
             height: calc(100vh - 80px);
-            opacity: 0;
         }
 
         /* Scenario card */
@@ -64,7 +64,7 @@
             margin-bottom: 6px;
         }
         .scenario-text {
-            font-size: 0.84em;
+            font-size: 0.88em;
             color: var(--text);
             line-height: 1.6;
         }
@@ -117,12 +117,6 @@
             gap: 5px;
             margin-top: 3px;
         }
-        .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: #22c55e;
-        }
-
         /* Messages area */
         .chat-messages {
             flex-grow: 1;
@@ -131,7 +125,7 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-            scroll-behavior: smooth;
+            overscroll-behavior: contain;
         }
         .chat-messages::-webkit-scrollbar { width: 4px; }
         .chat-messages::-webkit-scrollbar-track { background: transparent; }
@@ -169,7 +163,7 @@
         .bubble {
             padding: 10px 14px;
             border-radius: 16px;
-            font-size: 0.875em;
+            font-size: 0.95em;
             line-height: 1.65;
             word-wrap: break-word;
         }
@@ -247,7 +241,7 @@
         /* Continue button */
         #continue-btn {
             font-family: 'Inter', sans-serif;
-            font-size: 0.84em;
+            font-size: 0.88em;
             font-weight: 500;
             padding: 9px 20px;
             border-radius: 20px;
@@ -304,7 +298,7 @@
         }
         .choice-btn {
             font-family: 'Inter', sans-serif;
-            font-size: 0.82em;
+            font-size: 0.88em;
             line-height: 1.4;
             text-align: left;
             padding: 10px 14px;
@@ -361,10 +355,9 @@
     <div class="chat">
 
         <div class="chat-header">
-            <div class="h-avatar">SA</div>
+            <div class="h-avatar" aria-hidden="true"></div>
             <div>
-                <div class="h-name">Support Assistant</div>
-                <div class="h-status"><span class="status-dot"></span>Online</div>
+                <div class="h-name">Chatbot</div>
             </div>
         </div>
 
@@ -383,102 +376,121 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Access guard: only render when embedded via iframe from the Qualtrics
-    // survey. Blocks direct navigation to the raw link and forwarded links
-    // that bypass the survey flow. Runs after the full page has parsed, so
-    // replacing body content here fully removes the chat markup and stops
-    // the script below from ever running.
-    const inIframe = window.self !== window.top;
-    const fromQualtrics = document.referrer.includes('qualtrics.com');
-    if (!inIframe || !fromQualtrics) {
-        document.body.innerHTML =
-            '<div style="display:flex;align-items:center;justify-content:center;' +
-            'min-height:100vh;width:100%;">' +
-            '<p style="text-align:center;padding:0 24px;font-size:0.9em;color:#6b7280;">' +
-            'This page can only be accessed through the survey.</p></div>';
-        return;
-    }
-    document.querySelector('.app').style.opacity = '1';
-
     function countWords(str) {
         return str.trim().split(/\s+/).filter(Boolean).length;
     }
+    // Pacing. The typing indicator stands in for generation, so it scales with
+    // the length of the bubble it precedes and stays short. The read-lock is a
+    // remainder: each turn gets a total time budget of READ_MS_PER_WORD, and the
+    // lock only covers whatever that budget has left after playback. Long turns
+    // therefore spend their budget on screen instead of on a frozen button.
+    const TYPE_MS_PER_WORD = 45;
+    const TYPE_MS_MIN      = 900;
+    const TYPE_MS_MAX      = 3000;
+    const INTER_MSG_MS     = 700;
+    const READ_MS_PER_WORD = 180;
+    const READ_LOCK_MIN    = 3000;
+    const READ_LOCK_MAX    = 12000;
+
     function calcTypingMs(words) {
-        return Math.min(5000, Math.max(1800, words * 65));
+        return Math.min(TYPE_MS_MAX, Math.max(TYPE_MS_MIN, words * TYPE_MS_PER_WORD));
     }
-    function calcReadLockMs(turnWords) {
-        return Math.max(4500, 3000 + turnWords * 70);
+    function calcReadLockMs(turnWords, playbackMs) {
+        const budget = turnWords * READ_MS_PER_WORD;
+        return Math.min(READ_LOCK_MAX, Math.max(READ_LOCK_MIN, budget - playbackMs));
     }
-    const INTER_MSG_MS = 1000;
 
     // RAW SCRIPT — Study 1 | T0_I0
     const rawScript = [
-        {
-                "type": "sep",
-                "text": "Today"
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
-                ]
-        },
-        {
-                "type": "user",
-                "text": "I have been really stressed because of work. There is a big project deadline coming up, and it has been making it hard to sleep. I also do not have much free time during the day."
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Thank you for sharing that.",
-                        "Stress is something many people experience, and when several areas of life are affected at once, it tends to help to address things from more than one angle.",
-                        "I would suggest three things: brief breathing exercises, which take only a few minutes and can be done anywhere at any time; a short walk during a break, which is easy to fit into a short break; and a wind-down routine before bed, which is a simple addition that is easy to build into your evenings."
-                ]
-        },
-        {
-                "type": "user",
-                "text": "The breathing exercises sound useful. Can you tell me more about how to do them?"
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Of course.",
-                        "There is a simple technique that many people find easy to fit into their day. It requires no equipment and can be done anywhere without any preparation.",
-                        "It is called box breathing: breathe in for four counts, hold for four, breathe out for four, and hold for four again. The four-count structure is easy to remember and can be adjusted to a shorter count if the rhythm feels too slow. It can be done anywhere, whether sitting, standing, or lying down, making it easy to fit into different parts of the day."
-                ]
-        },
-        {
-                "type": "user",
-                "text": "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "That is understandable.",
-                        "The short walk I suggested earlier is a good alternative. It fits easily into most routines and works well alongside the other approaches already mentioned.",
-                        "Walking away from your workspace creates a brief change of environment. Even five minutes is a manageable amount to fit into a break. Keeping movement light rather than intense is generally a good approach, especially if you plan to walk in the afternoon or later in the day."
-                ]
-        },
-        {
-                "type": "user",
-                "text": "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Sleep difficulties tied to sustained stress often ease as the source of pressure resolves, so it is worth giving these approaches some time.",
-                        "A practical addition is writing down tomorrow's tasks before bed, which is a straightforward step to fit into the end of your evening. Keeping the process brief, around five minutes or so, tends to work well. A few minutes of light stretching beforehand is another option that many people find helpful as a way to wind down before sleep.",
-                        "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
-                ]
-        },
-        {
-                "type": "user",
-                "text": "Thank you. This has been really helpful."
-        },
-        {
-                "type": "end"
-        }
-];
+            {
+                    "type": "sep",
+                    "text": "Today"
+            },
+            {
+                    "type": "ai",
+                    "msgs": [
+                            "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
+                    ]
+            },
+            {
+                    "type": "user",
+                    "msgs": [
+                            "I have been really stressed because of a project I'm working on with a few other people. One of them wants me to redo their part on top of my own, and we're on a tight deadline, this Friday.",
+                            "If it doesn't go well, it could reflect badly on all of us. It has been making it hard to sleep, and I also do not have much free time during the day."
+                    ]
+            },
+            {
+                    "type": "ai",
+                    "msgs": [
+                            "Thank you for sharing that.",
+                            "Stress is something a lot of people deal with in everyday life, and it can come from lots of different places.",
+                            "It tends to help to think about it from a few different angles rather than just one, whatever the underlying reason happens to be.",
+                            "Here are three things you could try: brief breathing exercises, a short walk during a break, and a wind-down routine before bed.",
+                            "For the breathing, you can do it sitting or standing, wherever you happen to be. The walk just means stepping outside for a few minutes.",
+                            "The walk doesn't need to be long, just enough to step away for a bit before heading back to what you were doing.",
+                            "The wind-down routine can be as simple as you like, and you can try these in whatever order suits you."
+                    ]
+            },
+            {
+                    "type": "user",
+                    "msgs": [
+                            "The breathing exercises sound useful. Can you tell me more about how to do them?"
+                    ]
+            },
+            {
+                    "type": "ai",
+                    "msgs": [
+                            "Of course.",
+                            "There is a simple technique that many people find easy to fit into their day. It requires no equipment and can be done anywhere without any preparation.",
+                            "It's called box breathing. Breathe in for four counts, hold for four, breathe out for four, hold for four again.",
+                            "You can do this seated at your desk, standing in a hallway, or lying down before bed, whichever position feels most natural for you at the time.",
+                            "You can also do it quietly at your desk without needing to step away, if that's more convenient."
+                    ]
+            },
+            {
+                    "type": "user",
+                    "msgs": [
+                            "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
+                    ]
+            },
+            {
+                    "type": "ai",
+                    "msgs": [
+                            "That is understandable.",
+                            "The short walk I suggested earlier is a good alternative. It fits easily into most routines and works well alongside the other approaches already mentioned.",
+                            "Walking away from your workspace for a few minutes is a good option here too.",
+                            "You could take the same route each time or mix it up, whatever keeps it easy to stick with.",
+                            "If you can get outside for it, that works well, though walking indoors is just as fine if that's easier.",
+                            "If a walk doesn't suit you either, there are other options worth looking at as well."
+                    ]
+            },
+            {
+                    "type": "user",
+                    "msgs": [
+                            "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
+                    ]
+            },
+            {
+                    "type": "ai",
+                    "msgs": [
+                            "Sleep difficulties often ease once whatever has been causing the stress resolves, so it is worth giving these approaches some time regardless.",
+                            "A practical addition is writing down tomorrow's tasks before bed, and doing a few minutes of light stretching beforehand.",
+                            "You can jot the tasks down in a notebook, a notes app, or even just a scrap of paper, whatever's easiest to reach for.",
+                            "You don't need to write much, just enough to jog your memory again the next morning.",
+                            "The stretching can be as simple as a few slow shoulder rolls or a gentle stretch of your arms and back.",
+                            "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
+                    ]
+            },
+            {
+                    "type": "user",
+                    "msgs": [
+                            "Thank you. This has been really helpful."
+                    ]
+            },
+            {
+                    "type": "end"
+            }
+    ];
 
     const SCRIPT = rawScript.map(item => {
         if (item.type !== 'ai') return item;
@@ -486,12 +498,14 @@ document.addEventListener('DOMContentLoaded', () => {
             text,
             typingMs: calcTypingMs(countWords(text))
         }));
-        const turnWords = msgs.reduce((sum, m) => sum + countWords(m.text), 0);
+        const turnWords  = msgs.reduce((sum, m) => sum + countWords(m.text), 0);
+        const playbackMs = msgs.reduce((sum, m) => sum + m.typingMs, 0)
+                         + INTER_MSG_MS * (msgs.length - 1);
         return {
             type:       'ai',
             msgs,
             interMsgMs: INTER_MSG_MS,
-            readLockMs: calcReadLockMs(turnWords)
+            readLockMs: calcReadLockMs(turnWords, playbackMs)
         };
     });
 
@@ -502,9 +516,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let pointer    = 0;
     let cdInterval = null;
 
-    const now      = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const sleep    = ms => new Promise(r => setTimeout(r, ms));
-    const scrollDown = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
+    const now   = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // Auto-scroll only while the participant is already at the bottom. Once they
+    // scroll up to re-read something, new messages no longer drag the view down.
+    let stickToBottom = true;
+    const atBottom = () =>
+        msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 60;
+
+    msgsEl.addEventListener('scroll', () => { stickToBottom = atBottom(); });
+
+    const scrollDown = () => {
+        if (stickToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    };
 
     function addSeparator(text) {
         const el = document.createElement('div');
@@ -522,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const avatar = document.createElement('div');
         avatar.className = `avatar avatar-${sender}${ghostAvatar ? ' avatar-ghost' : ''}`;
-        avatar.textContent = isAI ? 'SA' : 'You';
+        avatar.textContent = isAI ? '' : 'You';
 
         const group = document.createElement('div');
         group.className = 'msg-group';
@@ -551,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.id = 'typing';
         row.className = 'msg-row msg-ai visible';
         row.innerHTML = `
-            <div class="avatar avatar-ai">SA</div>
+            <div class="avatar avatar-ai"></div>
             <div class="bubble bubble-ai">
                 <div class="typing-dots"><span></span><span></span><span></span></div>
             </div>`;
@@ -638,6 +663,13 @@ document.addEventListener('DOMContentLoaded', () => {
         advance();
     }
 
+    async function playUserTurn(turn) {
+        for (let i = 0; i < turn.msgs.length; i++) {
+            addBubble('user', turn.msgs[i], i > 0);
+            if (i < turn.msgs.length - 1) await sleep(700);
+        }
+    }
+
     async function playAITurn(turn) {
         for (let i = 0; i < turn.msgs.length; i++) {
             const m = turn.msgs[i];
@@ -668,13 +700,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (SCRIPT[pointer].type === 'end') {
             pointer++;
             setTimeout(addEndCard, 500);
-            // Tell the parent Qualtrics page the stimulus is finished, so it
-            // can reveal its Next button. postMessage is required here since
-            // this page and the Qualtrics survey are different origins;
-            // direct DOM access across origins is blocked by the browser.
-            try {
-                window.parent.postMessage({ type: 'tifu-stimulus-complete' }, '*');
-            } catch (e) { /* no-op if not embedded in an iframe */ }
             return;
         }
 
@@ -704,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (item.type === 'user') {
             hideContinue();
-            addBubble('user', item.text);
+            await playUserTurn(item);
             await sleep(1300);
             advance();
         }
