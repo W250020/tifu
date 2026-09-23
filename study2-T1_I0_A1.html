@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Condition: Study 2 | T1_I0_A1 -->
-    <title>Support Assistant</title>
+    <title>Chatbot</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -26,6 +25,7 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 17px;
             background-color: var(--bg);
             min-height: 100vh;
             display: flex;
@@ -42,7 +42,6 @@
             flex-direction: column;
             gap: 12px;
             height: calc(100vh - 80px);
-            opacity: 0;
         }
 
         /* Scenario card */
@@ -64,7 +63,7 @@
             margin-bottom: 6px;
         }
         .scenario-text {
-            font-size: 0.84em;
+            font-size: 0.88em;
             color: var(--text);
             line-height: 1.6;
         }
@@ -117,12 +116,6 @@
             gap: 5px;
             margin-top: 3px;
         }
-        .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: #22c55e;
-        }
-
         /* Messages area */
         .chat-messages {
             flex-grow: 1;
@@ -131,7 +124,7 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-            scroll-behavior: smooth;
+            overscroll-behavior: contain;
         }
         .chat-messages::-webkit-scrollbar { width: 4px; }
         .chat-messages::-webkit-scrollbar-track { background: transparent; }
@@ -169,7 +162,7 @@
         .bubble {
             padding: 10px 14px;
             border-radius: 16px;
-            font-size: 0.875em;
+            font-size: 0.95em;
             line-height: 1.65;
             word-wrap: break-word;
         }
@@ -247,7 +240,7 @@
         /* Continue button */
         #continue-btn {
             font-family: 'Inter', sans-serif;
-            font-size: 0.84em;
+            font-size: 0.88em;
             font-weight: 500;
             padding: 9px 20px;
             border-radius: 20px;
@@ -287,7 +280,7 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Choice mode (autonomy-supportive: illusory choice) */
+        /* Choice mode (autonomy-supportive: consequential choice) */
         .chat-footer.choices-mode {
             flex-direction: column;
             align-items: stretch;
@@ -304,7 +297,7 @@
         }
         .choice-btn {
             font-family: 'Inter', sans-serif;
-            font-size: 0.82em;
+            font-size: 0.88em;
             line-height: 1.4;
             text-align: left;
             padding: 10px 14px;
@@ -315,9 +308,27 @@
             cursor: pointer;
             transition: background .18s, border-color .18s;
         }
-        .choice-btn:hover {
+        .choice-btn:hover:not(:disabled) {
             background: var(--bg);
             border-color: var(--accent);
+        }
+        .choice-btn:disabled {
+            color: #9ca3af;
+            background: #f7f8f9;
+            cursor: not-allowed;
+        }
+        .choice-prompt {
+            font-size: .80em;
+            color: var(--text-soft);
+            padding: 0 2px 6px 2px;
+        }
+        .choice-lock {
+            font-size: .74em;
+            color: var(--text-soft);
+            opacity: .60;
+            text-align: right;
+            padding-right: 2px;
+            font-variant-numeric: tabular-nums;
         }
 
         /* End card */
@@ -355,16 +366,15 @@
 
     <div class="scenario-card">
         <div class="scenario-label">Scenario</div>
-        <div class="scenario-text">Imagine you are using a mental health support chatbot. You have been feeling low in mood and the chatbot suggests that physical activity might help. You decide to ask it for advice on how to get more active.</div>
+        <div class="scenario-text">Imagine you are using a mental health support chatbot. You have been feeling low in mood and want advice on becoming more physically active.</div>
     </div>
 
     <div class="chat">
 
         <div class="chat-header">
-            <div class="h-avatar">SA</div>
+            <div class="h-avatar" aria-hidden="true"></div>
             <div>
-                <div class="h-name">Support Assistant</div>
-                <div class="h-status"><span class="status-dot"></span>Online</div>
+                <div class="h-name">Chatbot</div>
             </div>
         </div>
 
@@ -383,145 +393,366 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Access guard: only render when embedded via iframe from the Qualtrics
-    // survey. Blocks direct navigation to the raw link and forwarded links
-    // that bypass the survey flow. Runs after the full page has parsed, so
-    // replacing body content here fully removes the chat markup and stops
-    // the script below from ever running.
-    const inIframe = window.self !== window.top;
-    const fromQualtrics = document.referrer.includes('qualtrics.com');
-    if (!inIframe || !fromQualtrics) {
-        document.body.innerHTML =
-            '<div style="display:flex;align-items:center;justify-content:center;' +
-            'min-height:100vh;width:100%;">' +
-            '<p style="text-align:center;padding:0 24px;font-size:0.9em;color:#6b7280;">' +
-            'This page can only be accessed through the survey.</p></div>';
-        return;
-    }
-    document.querySelector('.app').style.opacity = '1';
-
     function countWords(str) {
         return str.trim().split(/\s+/).filter(Boolean).length;
     }
+    // Pacing. The typing indicator stands in for generation, so it scales with
+    // the length of the bubble it precedes and stays short. The read-lock is a
+    // remainder: each turn gets a total time budget of READ_MS_PER_WORD, and the
+    // lock only covers whatever that budget has left after playback. Long turns
+    // therefore spend their budget on screen instead of on a frozen button.
+    const TYPE_MS_PER_WORD = 130;
+    const TYPE_MS_MIN      = 700;
+    const TYPE_MS_MAX      = 3500;
+    const INTER_MSG_MS     = 400;
+    const READ_MS_PER_WORD = 180;
+    const READ_LOCK_MIN    = 2000;
+    const READ_LOCK_MAX    = 8000;
+
     function calcTypingMs(words) {
-        return Math.min(5000, Math.max(1800, words * 65));
+        return Math.min(TYPE_MS_MAX, Math.max(TYPE_MS_MIN, words * TYPE_MS_PER_WORD));
     }
-    function calcReadLockMs(turnWords) {
-        return Math.max(4500, 3000 + turnWords * 70);
+    function calcReadLockMs(turnWords, playbackMs) {
+        const budget = turnWords * READ_MS_PER_WORD;
+        return Math.min(READ_LOCK_MAX, Math.max(READ_LOCK_MIN, budget - playbackMs));
     }
-    const INTER_MSG_MS = 1000;
 
-    // RAW SCRIPT — Study 2 | T1_I0_A1
-    const rawScript = [
-        {
-                "type": "sep",
-                "text": "Today"
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Hi there! I am glad you decided to explore this further. Physical activity can be a really useful tool when mood has been low. To help me give you the most useful advice, could you tell me a bit about your current situation and what has been making it hard to get more active?"
+    // ---- STUDY 2 DATA (generated from TIFU_Stimuli_Scripts_v2.xlsx) ----
+    const COND  = {"name": "T1_I0_A1", "T": "T1", "I": "I0", "A": "A1"};
+    const LINES = {
+        "t3": {
+                "T": [
+                        "You have not exercised properly in years and you are not sure where to begin.",
+                        "That long gap and your limited free time together are what make starting feel out of reach.",
+                        "Of what you have told me, the long gap is what I am weighing most below."
+                ],
+                "CORE": [
+                        "Three starting points worth considering are short daily walks, gentle stretching at home, and short bodyweight sessions at home."
+                ],
+                "I": [
+                        "Short walks fit into almost any routine, and they need no equipment or preparation.",
+                        "Stretching can be done at home, and bodyweight sessions need no travel or setup.",
+                        "Each of these can be scaled up later, once the routine has had time to settle."
+                ],
+                "A": [
+                        "Which of these three would you like to start with, and we will go from there?",
+                        "Tell me how you would like to pace this, and I will work around that.",
+                        "You are capable of making this work at whatever pace you set for yourself."
                 ]
         },
-        {
-                "type": "user",
-                "text": "I have been feeling pretty low lately and I know I should try to get more active, but I just do not know where to begin. I do not have much free time, and I have not properly exercised in years."
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Thank you for sharing that.",
-                        "You mentioned feeling low in mood, not knowing where to begin, having limited free time, and not having exercised in years — I want to make sure what I suggest takes all of that into account.",
-                        "I would suggest three starting points: short daily walks, which are easy to fit into almost any routine and require no equipment or preparation; gentle stretching at home, which can be done without travel and fits into most home environments without any special setup; and revisiting a form of activity you used to enjoy, which is often a more accessible way to return to movement than starting something entirely new.",
-                        "It makes complete sense that getting started feels difficult — that is a really common experience, and it is okay to take things at whatever pace feels right."
+        "t5": {
+                "I": [
+                        "A manageable target is the thing that matters most for someone returning after a long break.",
+                        "A consistent time of day is a common recommendation when a new routine is forming.",
+                        "The duration can be extended naturally as the routine becomes more established over time."
+                ],
+                "T": [
+                        "You mentioned having limited free time, so this needs to fit a short window.",
+                        "Your limited time and the years away both point toward keeping your first sessions short.",
+                        "Your limited free time is what I am weighing most in the guidance below."
+                ],
+                "CORE_by_act": {
+                        "Short daily walks": "Ten to fifteen minutes of walking is enough at this stage, and morning tends to work well.",
+                        "Gentle stretching at home": "Ten to fifteen minutes of stretching is enough at this stage, and evening tends to work well.",
+                        "Short bodyweight sessions at home": "Ten to fifteen minutes of bodyweight work is enough at this stage, and any time works well."
+                },
+                "A": [
+                        "If ten minutes feels long, five works too, and the length is yours to set.",
+                        "Tell me if a different time of day suits you better, and I will adapt.",
+                        "You know your own week, and you are the best judge of what fits."
                 ]
         },
-        {
-                "type": "choice",
-                "options": [
-                        "I would like to start with the short daily walks.",
-                        "I would like to try gentle stretching at home first.",
-                        "I would like to revisit an activity I used to enjoy."
+        "t7": {
+                "T12": [
+                        {
+                                "Giving up": "You have said that giving up after a few days is your usual pattern.",
+                                "No energy": "You have said that not having the energy to keep going is your worry.",
+                                "Forgetting": "You have said that simply forgetting on the day is what worries you most."
+                        },
+                        {
+                                "Giving up": "Your limited time and the long gap both make that early drop-off more likely.",
+                                "No energy": "Your limited time and the long gap both make an early energy dip likely.",
+                                "Forgetting": "Your limited time and the long gap both make a missed day more likely."
+                        }
+                ],
+                "CORE_by_act": {
+                        "Short daily walks": "Attaching the walk to something you already do each day helps it stick, such as your commute.",
+                        "Gentle stretching at home": "Attaching the stretch to something you already do daily helps it stick, such as brushing your teeth.",
+                        "Short bodyweight sessions at home": "Attaching the session to something you already do daily helps it stick, such as your morning shower."
+                },
+                "I12": [
+                        {
+                                "Giving up": "Habit stacking is a widely recommended technique for building up a new daily routine.",
+                                "No energy": "Very short sessions are a widely recommended starting point when energy is running low.",
+                                "Forgetting": "A fixed daily cue is a widely recommended technique for an easily forgotten routine."
+                        },
+                        {
+                                "Giving up": "Keeping a simple record, such as a tick on a calendar, is also often suggested.",
+                                "No energy": "Keeping the first week very light, with no fixed target at all, is also suggested.",
+                                "Forgetting": "Pairing the cue with a phone reminder is also something that is very often suggested."
+                        }
+                ],
+                "T3": {
+                        "Giving up": "Your pattern of dropping off is what I am building the suggestion around.",
+                        "No energy": "Your worry about energy is what I am building the suggestion around here.",
+                        "Forgetting": "Your worry about forgetting is what I am building the suggestion around here."
+                },
+                "I3": {
+                        "Giving up": "Starting at an easy level is a common recommendation while the habit is forming.",
+                        "No energy": "Starting at an easy level is a common recommendation while energy is still low.",
+                        "Forgetting": "Starting at an easy level is a common recommendation while the cue beds in."
+                },
+                "CORE_by_worry": {
+                        "Giving up": "Deciding it the night before removes the daily choice, which is what usually breaks down first.",
+                        "No energy": "Keeping the first sessions very short means that low energy never becomes a reason to skip.",
+                        "Forgetting": "Pairing it with a fixed daily cue means you never have to remember on your own."
+                },
+                "A": [
+                        {
+                                "Giving up": "A looser version works just as well, and how closely you follow it is yours.",
+                                "No energy": "A shorter version works just as well, and how long each session runs is yours.",
+                                "Forgetting": "A simpler version works just as well, and the cue you choose is entirely yours."
+                        },
+                        {
+                                "Giving up": "Tell me if the daily record feels like too much, and we can drop it.",
+                                "No energy": "Tell me if ten minutes still feels like too much, and we can shorten it.",
+                                "Forgetting": "Tell me if another daily cue would suit you better, and we will use that."
+                        },
+                        {
+                                "Giving up": "You have kept difficult things going before, and you can keep this going too.",
+                                "No energy": "You have found energy for difficult things before, and you can find it again.",
+                                "Forgetting": "You have built new habits before, and you are well able to build this."
+                        }
                 ]
         },
-        {
-                "type": "ai",
-                "msgs": [
-                        "Those are all good options to work with. Walks are particularly useful as a starting point for most people returning to activity, so let me share some practical guidance on those first.",
-                        "Since you mentioned that free time is limited and that you have not exercised properly in years, I want to suggest an approach that is realistic for where you are starting from.",
-                        "Starting with ten to fifteen minutes is a manageable and realistic target for someone returning to exercise after a long period away. Morning tends to work well for many people and is a common time for building a consistent routine. Starting with a short duration is a common recommendation and allows the routine to build naturally over time, and the time can be extended naturally as the habit becomes established.",
-                        "That said, you know your own schedule better than I do. If mornings do not work for you, going at lunchtime or in the evening are equally valid options. You could also start with just five or ten minutes if fifteen feels like too much right now — what matters most is finding a time and duration that feel genuinely workable for you."
-                ]
-        },
-        {
-                "type": "choice",
-                "options": [
-                        "I think mornings would work best for me.",
-                        "A lunchtime session seems more realistic.",
-                        "I would rather go in the evening after work."
-                ]
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "That is a great choice — any of those times can work well. One thing worth thinking about as you get started is how to keep the routine going beyond the first few days.",
-                        "Given what you mentioned about limited time and a long gap since you last exercised, the most practical strategy for staying consistent is one that works within those constraints from the very start.",
-                        "One approach is to attach it to something you already do every day — a technique sometimes called habit stacking, which is widely recommended for building new routines. Keeping a simple record — such as a tick on a calendar for each day you complete it — is something many people find useful for staying on track over a longer period of time. Starting at a level that feels easy and comfortable is a common recommendation, especially in the early stages when the habit is still forming.",
-                        "You are the one who decides how structured or flexible the approach is, and adjusting it to suit your life as you go is entirely reasonable. The goal is for this to feel workable rather than like another obligation."
-                ]
-        },
-        {
-                "type": "choice",
-                "options": [
-                        "How long should I give this before I notice a difference in my mood?",
-                        "What if my mood does not improve even after trying all of this?",
-                        "How will I know if the physical activity is actually helping?"
-                ]
-        },
-        {
-                "type": "ai",
-                "msgs": [
-                        "That is a really important thing to think about as you get started.",
-                        "Given what you shared about your mood having been low for a while and this being a return to exercise after a long gap, the timeline I would suggest takes both of those things into account.",
-                        "There is no single timeline that applies to everyone, and responses to physical activity tend to vary quite a bit from person to person. A few weeks is generally a reasonable window to give it before drawing any conclusions either way. Keeping a simple note of how you feel on days when you do and do not exercise can make it easier to notice any patterns over time. If things do not feel meaningfully different after that point, exploring other forms of support alongside physical activity is worth considering.",
-                        "You are the best judge of how you are feeling, so it is worth paying attention to your own sense of what is and is not changing. If after a few weeks physical activity feels like it is helping but not enough on its own, that is a valid signal. Deciding to explore additional support alongside it is entirely your call.",
-                        "I hope this gives you a useful place to start. Do let me know if you would like to explore anything further."
-                ]
-        },
-        {
-                "type": "user",
-                "text": "Thank you. This has been really helpful."
-        },
-        {
-                "type": "end"
+        "t9": {
+                "I": [
+                        "Reports of this kind come from a very wide range of quite different people.",
+                        "A window of some length is usually given first, before any firm conclusions are drawn.",
+                        {
+                                "Timeline": "A longer window is sometimes suggested when very little has changed in the beginning.",
+                                "Knowing if it helps": "A simple daily note is sometimes suggested as a way of tracking the change.",
+                                "If nothing changes": "A fixed review point is sometimes suggested as a way of deciding what next."
+                        }
+                ],
+                "T": [
+                        {
+                                "Timeline": "You have said that your own mood has been low for quite a while now.",
+                                "Knowing if it helps": "You have asked how you would know whether any of this is actually helping you.",
+                                "If nothing changes": "You have asked what you should do if your mood does not improve at all."
+                        },
+                        {
+                                "Timeline": "Your long gap and your low mood together stretch that early timeline a little.",
+                                "Knowing if it helps": "Your long gap and low mood together make the early signals harder to read.",
+                                "If nothing changes": "Your long gap and low mood together make early change slower to appear here."
+                        },
+                        {
+                                "Timeline": "The length of your low mood is the thing I am weighing most in that timeline.",
+                                "Knowing if it helps": "The length of your low mood is the thing I am weighing most in that guidance.",
+                                "If nothing changes": "The length of your low mood is the thing I am weighing most in that advice."
+                        }
+                ],
+                "CORE_by_quest": {
+                        "Timeline": "Most people notice a lift after single sessions, with steadier change coming over two to four weeks.",
+                        "Knowing if it helps": "The clearest signal is comparing how you feel on days you move against days you do not.",
+                        "If nothing changes": "If nothing at all has shifted after four weeks, that is a signal to change the approach."
+                },
+                "A": [
+                        {
+                                "Timeline": "Whether four weeks is the right marker for you is entirely yours to decide here.",
+                                "Knowing if it helps": "Which signal you choose to watch for is entirely yours to decide from here on.",
+                                "If nothing changes": "Which point you treat as the marker is entirely yours to decide from here on."
+                        },
+                        {
+                                "Timeline": "Tell me what marker would feel right to you, and we will use that.",
+                                "Knowing if it helps": "Tell me what signal would feel right to you, and we will watch that.",
+                                "If nothing changes": "Tell me what point would feel right to you, and we will use that."
+                        },
+                        "You are well placed yourself to judge what is changing and what is not."
+                ],
+                "CLOSE": "I hope this gives you a useful place to start. If things do not shift, other support is worth looking into."
         }
-];
+};
+    const USER  = {
+        "open": "Hi there! I am glad you decided to explore this. Physical activity can help when mood has been low. Could you tell me a bit about what has been making it hard to get active?",
+        "disclose": [
+                "I have been feeling pretty low lately and I know I should try to get more active, but I just do not know where to begin.",
+                "I do not have much free time, and I have not properly exercised in years."
+        ],
+        "a1_t4": {
+                "Short daily walks": "I would like to start with the short daily walks.",
+                "Gentle stretching at home": "I would like to try gentle stretching at home.",
+                "Short bodyweight sessions at home": "I would like to try short bodyweight sessions at home."
+        },
+        "a1_t6": {
+                "Giving up": "I am worried I will give up after a few days, like I usually do.",
+                "No energy": "I am worried I will not have the energy at all to keep this going.",
+                "Forgetting": "My worry is that I will simply forget to actually do it on the day."
+        },
+        "a1_t8": {
+                "Timeline": "How long should I give this before I notice a difference in my mood?",
+                "Knowing if it helps": "How will I know whether the activity is actually helping my mood at all?",
+                "If nothing changes": "What should I do if my mood does not improve at all from this?"
+        },
+        "a0_t4": "That sounds good. How long should they be, and when is the best time to go?",
+        "a0_t6": {
+                "Giving up": "I am worried I will give up after a few days, like I usually do.",
+                "No energy": "I am worried I will not have the energy at all to keep this going.",
+                "Forgetting": "My worry is that I will simply forget to actually do it on the day."
+        },
+        "a0_t8": {
+                "Timeline": "How long should I give this before I notice a difference in my mood?",
+                "Knowing if it helps": "How will I know whether the activity is actually helping my mood at all?",
+                "If nothing changes": "What should I do if my mood does not improve at all from this?"
+        },
+        "thanks": "Thank you. This has been really helpful."
+};
 
-    const SCRIPT = rawScript.map(item => {
+    // Instruction shown above the three options. Kept flat and task-describing, so the
+    // interface does not add autonomy-supportive language of its own.
+    const PROMPTS = {
+        activity: "Select the one of the three below that best fits what you would try first.",
+        worry:    "Select the one of the three below that best fits your main concern.",
+        question: "Select the one of the three below that best fits what you would ask next."
+    };
+
+    const ACTS    = ["Short daily walks","Gentle stretching at home","Short bodyweight sessions at home"];
+    const WORRIES = ["Giving up","No energy","Forgetting"];
+    const QUESTS  = ["Timeline","Knowing if it helps","If nothing changes"];
+
+    // Branch state. A1 participants set it by choosing. A0 pages assign it at load, so the
+    // distribution of activity, worry and question matches A1 across the sample.
+    const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
+    // FIX 4: the three options are shuffled per participant, so A1 selection is not pulled
+    // toward whichever option happens to sit first.
+    const shuffle = arr => {
+        const b = arr.slice();
+        for (let i = b.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [b[i], b[j]] = [b[j], b[i]];
+        }
+        return b;
+    };
+    const BRANCH = { activity: null, worry: null, question: null };
+    if (COND.A === 'A0') {
+        BRANCH.activity = rnd(ACTS);
+        BRANCH.worry    = rnd(WORRIES);
+        BRANCH.question = rnd(QUESTS);
+    }
+
+    function aiTurn(texts) { return { type: 'ai', msgs: texts.filter(Boolean) }; }
+
+    // A slot is either one line, or a {branch: line} map when it varies with what was chosen.
+    const R = (v, key) => (typeof v === 'string' ? v : v[key]);
+
+    function turn3() {
+        const L = LINES.t3;
+        const a1 = (COND.A === 'A0') ? L.A1_by_act[BRANCH.activity] : L.A[0];
+        return aiTurn([...L.T, ...L.CORE, ...L.I, a1, L.A[1], L.A[2]]);
+    }
+    function turn5() {
+        const L = LINES.t5;
+        return aiTurn([...L.I, ...L.T, L.CORE_by_act[BRANCH.activity], ...L.A]);
+    }
+    function turn7() {
+        const L = LINES.t7, k = BRANCH.worry;
+        return aiTurn([...L.T12.map(v => R(v, k)), L.CORE_by_act[BRANCH.activity],
+                       ...L.I12.map(v => R(v, k)), R(L.T3, k), R(L.I3, k),
+                       L.CORE_by_worry[k], ...L.A.map(v => R(v, k))]);
+    }
+    function turn9() {
+        // T1 T2 | CORE | I1 I2 | T3 | I3 | A block | CLOSE, so the answer arrives third
+        // instead of seventh. Order is the same in all eight conditions.
+        const L = LINES.t9, k = BRANCH.question;
+        return aiTurn([R(L.T[0], k), R(L.T[1], k), L.CORE_by_quest[k],
+                       R(L.I[0], k), R(L.I[1], k), R(L.T[2], k), R(L.I[2], k),
+                       ...L.A.map(v => R(v, k)), L.CLOSE]);
+    }
+
+    // The script is assembled one step at a time so an A1 choice can set BRANCH before the
+    // next chatbot turn is built.
+    const STEPS = [
+        () => ({ type: 'sep', text: 'Today' }),
+        () => aiTurn([USER.open]),
+        () => ({ type: 'user', msgs: USER.disclose }),
+        () => turn3(),
+        () => {
+            if (COND.A !== 'A1') return { type: 'user', msgs: [USER.a0_t4] };
+            const keys = shuffle(ACTS);
+            return { type: 'choice', options: keys.map(a => USER.a1_t4[a]), sets: 'activity', keys, prompt: PROMPTS.activity };
+        },
+        () => turn5(),
+        () => {
+            if (COND.A !== 'A1') return { type: 'user', msgs: [USER.a0_t6[BRANCH.worry]] };
+            const keys = shuffle(WORRIES);
+            return { type: 'choice', options: keys.map(w => USER.a1_t6[w]), sets: 'worry', keys, prompt: PROMPTS.worry };
+        },
+        () => turn7(),
+        () => {
+            if (COND.A !== 'A1') return { type: 'user', msgs: [USER.a0_t8[BRANCH.question]] };
+            const keys = shuffle(QUESTS);
+            return { type: 'choice', options: keys.map(q => USER.a1_t8[q]), sets: 'question', keys, prompt: PROMPTS.question };
+        },
+        () => turn9(),
+        () => ({ type: 'user', msgs: [USER.thanks] }),
+        () => ({ type: 'end' })
+    ];
+
+    // Each step is evaluated once and kept, so the shuffled option order cannot change
+    // between the look-ahead and the render.
+    const stepCache = {};
+    function stepAt(i) {
+        if (!(i in stepCache)) stepCache[i] = STEPS[i]();
+        return stepCache[i];
+    }
+
+    function decorate(item) {
         if (item.type !== 'ai') return item;
-        const msgs = item.msgs.map(text => ({
-            text,
-            typingMs: calcTypingMs(countWords(text))
-        }));
-        const turnWords = msgs.reduce((sum, m) => sum + countWords(m.text), 0);
-        return {
-            type:       'ai',
-            msgs,
-            interMsgMs: INTER_MSG_MS,
-            readLockMs: calcReadLockMs(turnWords)
-        };
-    });
+        const msgs = item.msgs.map(text => ({ text, typingMs: calcTypingMs(countWords(text)) }));
+        const turnWords  = msgs.reduce((s, m) => s + countWords(m.text), 0);
+        const playbackMs = msgs.reduce((s, m) => s + m.typingMs, 0) + INTER_MSG_MS * (msgs.length - 1);
+        return { type: 'ai', msgs, interMsgMs: INTER_MSG_MS, readLockMs: calcReadLockMs(turnWords, playbackMs) };
+    }
 
+    // Reports the path taken back to Qualtrics as embedded data.
+    function postBranch(done) {
+        const payload = {
+            condition: COND.name,
+            transparency: COND.T, interpretability: COND.I, autonomy: COND.A,
+            activity: BRANCH.activity, worry: BRANCH.worry, question: BRANCH.question,
+            completed: !!done
+        };
+        window.__stimulusBranch = payload;
+        try { window.parent.postMessage(JSON.stringify({ stimulus: payload }), '*'); } catch (e) {}
+    }
+
+    // FIX 5: report the assignment at load as well as at the end, so an abandoned A0 session
+    // still records which path was shown.
+    postBranch(false);
+
+    // ---- engine, adapted from the Study 1 stimulus ----
     const msgsEl      = document.getElementById('msgs');
     const footerEl    = document.getElementById('footer');
     const continueBtn = document.getElementById('continue-btn');
 
     let pointer    = 0;
     let cdInterval = null;
+    let choiceInterval = null;
 
-    const now      = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const sleep    = ms => new Promise(r => setTimeout(r, ms));
-    const scrollDown = () => { msgsEl.scrollTop = msgsEl.scrollHeight; };
+    const now   = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // Auto-scroll only while the participant is already at the bottom. Once they
+    // scroll up to re-read something, new messages no longer drag the view down.
+    let stickToBottom = true;
+    const atBottom = () =>
+        msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 60;
+
+    msgsEl.addEventListener('scroll', () => { stickToBottom = atBottom(); });
+
+    const scrollDown = () => {
+        if (stickToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    };
 
     function addSeparator(text) {
         const el = document.createElement('div');
@@ -539,7 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const avatar = document.createElement('div');
         avatar.className = `avatar avatar-${sender}${ghostAvatar ? ' avatar-ghost' : ''}`;
-        avatar.textContent = isAI ? 'SA' : 'You';
+        avatar.textContent = isAI ? '' : 'You';
 
         const group = document.createElement('div');
         group.className = 'msg-group';
@@ -568,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.id = 'typing';
         row.className = 'msg-row msg-ai visible';
         row.innerHTML = `
-            <div class="avatar avatar-ai">SA</div>
+            <div class="avatar avatar-ai"></div>
             <div class="bubble bubble-ai">
                 <div class="typing-dots"><span></span><span></span><span></span></div>
             </div>`;
@@ -620,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (badge) badge.remove();
     }
 
-    function showChoices(options) {
+    function showChoices(options, sets, keys, lockMs, prompt) {
         footerEl.classList.remove('hidden');
         footerEl.classList.add('choices-mode');
         continueBtn.style.display = 'none';
@@ -629,30 +860,62 @@ document.addEventListener('DOMContentLoaded', () => {
         wrap.className = 'choice-wrap';
         wrap.id = 'choice-wrap';
 
-        options.forEach(opt => {
+        if (prompt) {
+            const p = document.createElement('div');
+            p.className = 'choice-prompt';
+            p.textContent = prompt;
+            wrap.appendChild(p);
+        }
+
+        options.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'choice-btn';
             btn.textContent = opt;
-            btn.addEventListener('click', () => selectChoice(opt));
+            btn.disabled = true;
+            btn.addEventListener('click', () => selectChoice(opt, sets, keys && keys[idx]));
             wrap.appendChild(btn);
         });
 
         footerEl.appendChild(wrap);
+
+        const unlock = () => wrap.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
+        if (!lockMs || lockMs <= 0) { unlock(); return; }
+        let secs = Math.ceil(lockMs / 1000);
+        const note = document.createElement('div');
+        note.className = 'choice-lock';
+        note.textContent = `(${secs}s)`;
+        wrap.appendChild(note);
+        choiceInterval = setInterval(() => {
+            secs--;
+            if (secs <= 0) {
+                clearInterval(choiceInterval); choiceInterval = null;
+                note.remove(); unlock();
+            } else { note.textContent = `(${secs}s)`; }
+        }, 1000);
     }
 
     function hideChoices() {
+        if (choiceInterval) { clearInterval(choiceInterval); choiceInterval = null; }
         footerEl.classList.remove('choices-mode');
         continueBtn.style.display = '';
         const wrap = document.getElementById('choice-wrap');
         if (wrap) wrap.remove();
     }
 
-    async function selectChoice(text) {
+    async function selectChoice(text, sets, key) {
+        if (sets && key) { BRANCH[sets] = key; postBranch(false); }
         hideChoices();
         footerEl.classList.add('hidden');
         addBubble('user', text);
         await sleep(1300);
         advance();
+    }
+
+    async function playUserTurn(turn) {
+        for (let i = 0; i < turn.msgs.length; i++) {
+            addBubble('user', turn.msgs[i], i > 0);
+            if (i < turn.msgs.length - 1) await sleep(700);
+        }
     }
 
     async function playAITurn(turn) {
@@ -680,22 +943,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function advance() {
-        if (pointer >= SCRIPT.length) { hideContinue(); return; }
+        if (pointer >= STEPS.length) { hideContinue(); return; }
 
-        if (SCRIPT[pointer].type === 'end') {
+        let item = stepAt(pointer);
+
+        if (item.type === 'end') {
             pointer++;
+            postBranch(true);
             setTimeout(addEndCard, 500);
-            // Tell the parent Qualtrics page the stimulus is finished, so it
-            // can reveal its Next button. postMessage is required here since
-            // this page and the Qualtrics survey are different origins;
-            // direct DOM access across origins is blocked by the browser.
-            try {
-                window.parent.postMessage({ type: 'tifu-stimulus-complete' }, '*');
-            } catch (e) { /* no-op if not embedded in an iframe */ }
             return;
         }
 
-        const item = SCRIPT[pointer++];
+        pointer++;
+        if (item.type === 'ai') item = decorate(item);
 
         if (item.type === 'sep') {
             addSeparator(item.text);
@@ -707,10 +967,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (item.type === 'ai') {
             hideContinue();
             await playAITurn(item);
-            const next = SCRIPT[pointer];
+            const next = pointer < STEPS.length ? stepAt(pointer) : null;
             if (next && next.type === 'choice') {
                 pointer++;
-                showChoices(next.options);
+                showChoices(next.options, next.sets, next.keys, item.readLockMs, next.prompt);
             } else if (next && next.type === 'user') {
                 showContinue(item.readLockMs);
             } else {
@@ -721,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (item.type === 'user') {
             hideContinue();
-            addBubble('user', item.text);
+            await playUserTurn(item);
             await sleep(1300);
             advance();
         }
@@ -732,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     continueBtn.addEventListener('click', () => {
         if (continueBtn.disabled) return;
-        const next = SCRIPT[pointer];
+        const next = pointer < STEPS.length ? stepAt(pointer) : null;
         if (next && next.type === 'user') advance();
     });
 
