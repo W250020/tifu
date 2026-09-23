@@ -31,14 +31,16 @@ Study 1 is a 2×2 (T × I) design. Study 2 is a 2×2×2 (T × I × A) design.
 
 | Condition | Link |
 |---|---|
-| T1_I1_A0 | https://w250020.github.io/tifu/study2-T1_I1_A0.html |
-| T1_I0_A0 | https://w250020.github.io/tifu/study2-T1_I0_A0.html |
-| T0_I1_A0 | https://w250020.github.io/tifu/study2-T0_I1_A0.html |
 | T0_I0_A0 | https://w250020.github.io/tifu/study2-T0_I0_A0.html |
-| T1_I1_A1 | https://w250020.github.io/tifu/study2-T1_I1_A1.html |
-| T1_I0_A1 | https://w250020.github.io/tifu/study2-T1_I0_A1.html |
-| T0_I1_A1 | https://w250020.github.io/tifu/study2-T0_I1_A1.html |
 | T0_I0_A1 | https://w250020.github.io/tifu/study2-T0_I0_A1.html |
+| T0_I1_A0 | https://w250020.github.io/tifu/study2-T0_I1_A0.html |
+| T0_I1_A1 | https://w250020.github.io/tifu/study2-T0_I1_A1.html |
+| T1_I0_A0 | https://w250020.github.io/tifu/study2-T1_I0_A0.html |
+| T1_I0_A1 | https://w250020.github.io/tifu/study2-T1_I0_A1.html |
+| T1_I1_A0 | https://w250020.github.io/tifu/study2-T1_I1_A0.html |
+| T1_I1_A1 | https://w250020.github.io/tifu/study2-T1_I1_A1.html |
+
+
 
 ## Embedding in Qualtrics
 
