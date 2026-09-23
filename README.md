@@ -59,6 +59,3 @@ scroll the outer survey page.
 - Study 2's `_A1` files include a 3-option choice widget at three points in the
   conversation (illusory choice per SDT: the participant's selection changes
   the displayed message, not the chatbot's subsequent response).
-- All bubble text is sourced directly from `TIFU_Manuscript_Stimuli_22_June.xlsx`
-  (22 June update tab), with two approved wording overrides in Study 2 Turn 6/7
-  to remove activity-specific language that presupposed the Turn 4 choice.
