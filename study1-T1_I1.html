@@ -402,94 +402,99 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // RAW SCRIPT — Study 1 | T1_I1
     const rawScript = [
-            {
-                    "type": "sep",
-                    "text": "Today"
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "I have been really stressed because of a project I'm working on with a few other people. One of them wants me to redo their part on top of my own, and we're on a tight deadline, this Friday.",
-                            "If it doesn't go well, it could reflect badly on all of us. It has been making it hard to sleep, and I also do not have much free time during the day."
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Thank you for sharing that.",
-                            "I'm taking into account that you're redoing someone else's part on top of your own before Friday, with the outcome reflecting on everyone.",
-                            "I think that combination is driving your sleep trouble and lack of free time, so I'm weighing those most in what I suggest.",
-                            "Given the extra workload and tight deadline, I'd suggest brief breathing exercises, a short walk during a break, and a wind-down routine before bed.",
-                            "I'm suggesting these specifically because they're short and don't take much time, which is what you said you're short on right now. Breathing works because slow breathing activates your relaxation response and directly counteracts stress.",
-                            "The short walk helps because stepping away from your screen lets your mind reset, which makes it easier to return to what's left to do.",
-                            "A wind-down routine helps too, because a consistent pre-sleep signal quiets a mind that's been active under pressure. If time weren't tight for you, I'd probably suggest something more involved, but I've kept it short because of what you told me."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "The breathing exercises sound useful. Can you tell me more about how to do them?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Of course.",
-                            "Since the deadline and extra workload still limit your sleep and free time, I want to suggest a technique that works within those constraints.",
-                            "It's called box breathing. Breathe in for four counts, hold for four, breathe out for four, hold for four again.",
-                            "This works by giving your nervous system a structured rhythm, which interrupts the stress response and brings your body into a calmer state. It's also effective before bed, because slowing your breath signals your body to move toward rest.",
-                            "It also helps mid-work if things feel overwhelming, since you can do it quietly without stepping away."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "That is understandable.",
-                            "Given that the deadline and limited free time still narrow your options, the short walk I suggested earlier is the most practical alternative.",
-                            "Walking away from your workspace for a few minutes is a good option here too.",
-                            "This works because a change of environment interrupts the mental cycle that keeps stress active, even after five minutes.",
-                            "Stepping outside also helps because natural light lifts mood on top of the movement, though walking indoors still works.",
-                            "If self-consciousness about doing this in public weren't a concern for you, I might have just stuck with recommending the breathing exercises, but since you mentioned that, the walk makes more sense as the next option."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Since the deadline is weighing on you most, that pressure should ease once the project is submitted, though these approaches are worth trying anyway.",
-                            "A practical addition is writing down tomorrow's tasks before bed, and doing a few minutes of light stretching beforehand.",
-                            "Writing things down gives pending thoughts a concrete place to land, which quiets the planning activity that keeps your mind awake when there's unfinished work, like the parts of the project still left to do.",
-                            "It also reduces the urge to check your phone before bed, since whatever you might forget is already captured.",
-                            "The stretching also lowers physical arousal, which makes it easier for your body to shift into a resting state.",
-                            "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "Thank you. This has been really helpful."
-                    ]
-            },
-            {
-                    "type": "end"
-            }
+        {
+            "type": "sep",
+            "text": "Today"
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "I have been really stressed because of a project I'm working on with a few other people. One of them wants me to redo their part on top of my own, and we're on a tight deadline, this Friday.",
+                "If it doesn't go well, it could reflect badly on all of us. It has been making it hard to sleep, and I also do not have much free time during the day."
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You're redoing someone else's part on top of your own, with Friday as the deadline.",
+                "That extra workload and the deadline together are cutting into both your sleep and your free time.",
+                "Of everything you mentioned, the time pressure matters most in what I suggest below.",
+                "Three things worth trying today are brief breathing exercises, a short walk during a break, and a wind-down routine before bed.",
+                "Breathing helps because slowing it down activates your relaxation response, which directly counteracts the stress you are feeling.",
+                "I am suggesting these three because they are short and need no setup, which suits a week as tight as this one.",
+                "If time were not a constraint, I'd suggest something more involved, though shorter practices make better sense here."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "The breathing exercises sound useful. Can you tell me more about how to do them?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You mentioned the breathing exercises specifically, so I will stay with that one.",
+                "Between the deadline and the little free time you have, a technique this short fits best.",
+                "Your limited free time is the main reason I am keeping this to something brief.",
+                "It's called box breathing. Breathe in for four counts, hold for four, breathe out for four, hold for four again.",
+                "This works by giving your nervous system a structured rhythm, which interrupts the stress response and calms your body.",
+                "I chose this one over longer practices because it needs no equipment and can be done anywhere.",
+                "Had you wanted something to do only at night, I would have suggested a longer wind-down instead."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You have said that doing breathing exercises in public would make you self-conscious.",
+                "Combined with the deadline and your limited free time, that narrows what is practical here.",
+                "Your comfort in public is what I am weighing most in suggesting this next option.",
+                "Walking away from your workspace for a few minutes is a good option here too.",
+                "This works because a change of environment interrupts the mental loop that keeps the stress active.",
+                "I am suggesting the walk over the other options because it draws far less attention in public.",
+                "Had public settings not been a concern, I would have stayed with the breathing exercises instead."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You have mentioned twice now that sleep has been the hardest part of this.",
+                "The unfinished project work and the Friday deadline are what keep your mind active at night.",
+                "Of what you have told me, that Friday deadline is what I would address first here.",
+                "A practical addition is writing down tomorrow's tasks before bed, and doing a few minutes of light stretching beforehand.",
+                "Writing tasks down gives pending thoughts a concrete place to land, which quiets the planning that keeps you awake.",
+                "I am adding these two because they target the mental and the physical sides of sleeplessness separately.",
+                "If sleep had not been the sticking point, I would have left the evening routine alone entirely.",
+                "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "Thank you. This has been really helpful."
+            ]
+        },
+        {
+            "type": "end"
+        }
     ];
 
     const SCRIPT = rawScript.map(item => {

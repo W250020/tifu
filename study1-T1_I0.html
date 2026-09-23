@@ -402,94 +402,99 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // RAW SCRIPT — Study 1 | T1_I0
     const rawScript = [
-            {
-                    "type": "sep",
-                    "text": "Today"
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "I have been really stressed because of a project I'm working on with a few other people. One of them wants me to redo their part on top of my own, and we're on a tight deadline, this Friday.",
-                            "If it doesn't go well, it could reflect badly on all of us. It has been making it hard to sleep, and I also do not have much free time during the day."
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Thank you for sharing that.",
-                            "I'm taking into account that you're redoing someone else's part on top of your own before Friday, with the outcome reflecting on everyone.",
-                            "I think that combination is driving your sleep trouble and lack of free time, so I'm weighing those most in what I suggest.",
-                            "Here are three simple things you could try today: brief breathing exercises, a short walk during a break, and a wind-down routine before bed.",
-                            "For the breathing, you can do it sitting or standing, wherever you happen to be. The walk just means stepping outside for a few minutes, alone or with a friend if you prefer.",
-                            "The walk doesn't need to be long or far, just enough to step away for a bit before heading back to what you were doing.",
-                            "The wind-down routine can be as simple as you like, and it doesn't need any special setup, equipment, or set length of time. You can try all three in whatever order suits you."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "The breathing exercises sound useful. Can you tell me more about how to do them?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Of course.",
-                            "Since the deadline and extra workload still limit your sleep and free time, I want to suggest a technique that works within those constraints.",
-                            "It's called box breathing. Breathe in for four counts, hold for four, breathe out for four, hold for four again.",
-                            "You can do this seated at your desk, standing in a hallway, or lying down before bed, whichever position feels most natural for you at the time. There is no need to count perfectly, and you can start and stop whenever suits you.",
-                            "You can also do it quietly at your desk without needing to step away, if that's more convenient."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "That is understandable.",
-                            "Given that the deadline and limited free time still narrow your options, the short walk I suggested earlier is the most practical alternative.",
-                            "Walking away from your workspace for a few minutes is a good option here too.",
-                            "You could take the same route each time or mix it up, whatever keeps it easy to stick with.",
-                            "If you can get outside for it, that works well, though walking indoors is just as fine if that's easier.",
-                            "If a walk doesn't suit you either, there are other options worth looking at as well. We can go through them together if you would like, and there is no rush to decide on any of them today."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
-                    ]
-            },
-            {
-                    "type": "ai",
-                    "msgs": [
-                            "Since the deadline is weighing on you most, that pressure should ease once the project is submitted, though these approaches are worth trying anyway.",
-                            "A practical addition is writing down tomorrow's tasks before bed, and doing a few minutes of light stretching beforehand.",
-                            "You can jot the tasks down in a notebook, a notes app, or even just a scrap of paper, whatever's easiest to reach for, and any format that feels natural to you is fine.",
-                            "You don't need to write much, just a few words on each task to jog your memory again the next morning.",
-                            "The stretching can be as simple as a few slow shoulder rolls or a gentle stretch of your arms and back.",
-                            "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
-                    ]
-            },
-            {
-                    "type": "user",
-                    "msgs": [
-                            "Thank you. This has been really helpful."
-                    ]
-            },
-            {
-                    "type": "end"
-            }
+        {
+            "type": "sep",
+            "text": "Today"
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "Hi there! I am glad you reached out. To get started, could you tell me a bit about what has been causing you stress lately?"
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "I have been really stressed because of a project I'm working on with a few other people. One of them wants me to redo their part on top of my own, and we're on a tight deadline, this Friday.",
+                "If it doesn't go well, it could reflect badly on all of us. It has been making it hard to sleep, and I also do not have much free time during the day."
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You're redoing someone else's part on top of your own, with Friday as the deadline.",
+                "That extra workload and the deadline together are cutting into both your sleep and your free time.",
+                "Of everything you mentioned, the time pressure matters most in what I suggest below.",
+                "Three things worth trying today are brief breathing exercises, a short walk during a break, and a wind-down routine before bed.",
+                "For the breathing, you can do it sitting or standing, wherever you happen to be at the time.",
+                "You can try all three in whatever order suits you, and there is no particular sequence you need to follow.",
+                "The walk doesn't need to be long or far, just enough to step away for a bit before heading back."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "The breathing exercises sound useful. Can you tell me more about how to do them?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You mentioned the breathing exercises specifically, so I will stay with that one.",
+                "Between the deadline and the little free time you have, a technique this short fits best.",
+                "Your limited free time is the main reason I am keeping this to something brief.",
+                "It's called box breathing. Breathe in for four counts, hold for four, breathe out for four, hold for four again.",
+                "You can do this seated at your desk, standing in a hallway, or lying down in bed before sleep.",
+                "There is no need to count perfectly, and you can start and stop whenever it suits you.",
+                "You can also do it quietly at your desk without needing to step away from your work."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "I think I would feel a bit self-conscious doing breathing exercises in public. Are there other options?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You have said that doing breathing exercises in public would make you self-conscious.",
+                "Combined with the deadline and your limited free time, that narrows what is practical here.",
+                "Your comfort in public is what I am weighing most in suggesting this next option.",
+                "Walking away from your workspace for a few minutes is a good option here too.",
+                "You could take the same route each time or mix it up, whatever keeps it easy.",
+                "If you can get outside for it, that works well, though walking indoors is just as fine.",
+                "If a walk doesn't suit you either, there are other options worth looking at as well."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "That makes sense. What if I try all of this but I am still struggling to fall asleep?"
+            ]
+        },
+        {
+            "type": "ai",
+            "msgs": [
+                "You have mentioned twice now that sleep has been the hardest part of this.",
+                "The unfinished project work and the Friday deadline are what keep your mind active at night.",
+                "Of what you have told me, that Friday deadline is what I would address first here.",
+                "A practical addition is writing down tomorrow's tasks before bed, and doing a few minutes of light stretching beforehand.",
+                "You can jot the tasks down in a notebook, a notes app, or on a scrap of paper.",
+                "You don't need to write much, just a few words on each task to jog your memory.",
+                "The stretching can be as simple as a few slow shoulder rolls or a gentle back stretch instead.",
+                "I hope these give you a useful place to start. Feel free to come back any time if you would like to explore anything further."
+            ]
+        },
+        {
+            "type": "user",
+            "msgs": [
+                "Thank you. This has been really helpful."
+            ]
+        },
+        {
+            "type": "end"
+        }
     ];
 
     const SCRIPT = rawScript.map(item => {
